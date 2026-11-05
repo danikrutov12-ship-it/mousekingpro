@@ -3,7 +3,7 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { imagePrice, money } from '@shared/pricing'
 import type { Attachment, EditModel, Mode } from '@shared/types'
-import { attachFiles, loadEditModels, modelFor, pickAttachments, pickModel, saveSettings, send, stop, toast } from '../lib/actions'
+import { attachFiles, imageSize, loadEditModels, modelFor, pickAttachments, pickModel, saveSettings, send, stop, toast } from '../lib/actions'
 import { api } from '../lib/api'
 import { fileUrl, humanSize } from '../lib/format'
 import { get, set, useApp } from '../lib/store'
@@ -12,6 +12,7 @@ import { ContextRing } from './Jobs'
 import { ModelPicker } from './ModelPicker'
 import { Popover } from './Popover'
 import { PromptTools } from './PromptTools'
+import { aspectForPhoto } from '@shared/video'
 
 export const MODES: [Mode, string, typeof MessageSquare][] = [
   ['text', 'Чат', MessageSquare], ['image', 'Картинка', Image], ['video', 'Видео', Video],
@@ -72,7 +73,7 @@ function EditModelButton() {
 
 /** Короткая сводка параметров генерации: «1024×1024 · 8 шагов · png». */
 function summary(mode: Mode, p: Record<string, any>): string {
-  const ratio = { auto: 'авто' } as Record<string, string>
+  const ratio = { auto: 'авто', adaptive: 'как у фото' } as Record<string, string>
   const parts: string[] = []
   if (mode === 'video') {
     if (p.duration) parts.push(String(p.duration).replace(/s$/, ' с'))
@@ -179,9 +180,22 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
   const refSetOn = useApp((s) => !!s.refSet)
   const [optsOpen, setOptsOpen] = useState(false)
   // новые режим или модель — параметры по умолчанию для неё (даже если панель параметров свёрнута)
+  // фото к видео: пропорции «как у фото» (или ближайшие), чтобы модели не пришлось перестраивать кадр
+  const firstPhoto = attachments.find((a) => a.kind === 'image')?.path
+  const photoCount = attachments.filter((a) => a.kind === 'image').length
+  const [photoRatio, setPhotoRatio] = useState(0)
   useEffect(() => {
-    setParams(defaults(mode, model))
+    if (!firstPhoto) return setPhotoRatio(0)
+    imageSize(firstPhoto).then((s) => setPhotoRatio(s.w / s.h)).catch(() => setPhotoRatio(0))
+  }, [firstPhoto])
+  useEffect(() => {
+    setParams(defaults(mode, model, photoRatio))
   }, [mode, model?.id])
+  useEffect(() => {
+    if (mode !== 'video' || !photoRatio) return
+    const ar = aspectForPhoto(model?.constraints?.aspect_ratios, photoRatio)
+    if (ar) setParams((p) => ({ ...p, aspect_ratio: ar }))
+  }, [photoRatio])
   const ctxUsed = useApp((s) => {
     const msgs = s.current?.chat.messages || []
     for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i]._tokens) return msgs[i]._tokens![0]
@@ -267,7 +281,7 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
                 <button className="opts-summary" onClick={() => setOptsOpen(!optsOpen)}>
                   <SlidersHorizontal size={13} /><span>{summary(mode, params)}</span><ChevronDown size={13} style={{ transform: optsOpen ? 'rotate(180deg)' : undefined }} />
                 </button>
-                {optsOpen && <MediaOptions mode={mode} model={model} params={params} onChange={setParams} />}
+                {optsOpen && <MediaOptions mode={mode} model={model} params={params} onChange={setParams} photos={photoCount} />}
               </>
             )}
             {mode === 'image' && <PromptTools />}

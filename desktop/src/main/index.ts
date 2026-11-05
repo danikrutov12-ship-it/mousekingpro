@@ -29,6 +29,7 @@ import * as store from './store'
 import { ICON, installDesktopEntry } from './install'
 import { isWin, which } from './platform'
 import * as updater from './updater'
+import { isReferenceModel, MAX_REFERENCE_IMAGES } from '@shared/video'
 import { setServerSecrets, sshAuth } from './tools'
 import { explain, Venice } from './venice'
 
@@ -274,7 +275,7 @@ async function send(req: SendRequest) {
     }
     user = { role: 'user', content, _display: req.text }
   } else {
-    const shown = Object.entries(req.params || {}).filter(([k]) => !['model', 'prompt', 'image_url', 'video_url'].includes(k))
+    const shown = Object.entries(req.params || {}).filter(([k]) => !['model', 'prompt', 'image_url', 'video_url', 'reference_image_urls'].includes(k))
     user = {
       role: 'user', content: `[${label} · ${req.model.name}] ${req.text}`, _display: req.text,
       _mode: req.op ? opLabel(req.op) : `${label} · ${req.model.name}` + (shown.length ? ' · ' + shown.map(([k, v]) => `${k}=${v}`).join(', ') : ''),
@@ -396,9 +397,12 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
   if (req.text) params.prompt = req.text
   if (req.mode === 'image') params.safe_mode = !!settings.safe_mode
   else {
-    const img = req.attachments.find((a) => a.kind === 'image')
+    const photos = [...req.attachments.filter((a) => a.kind === 'image').map((a) => a.path), ...(req.refPaths || [])]
     const vid = req.attachments.find((a) => a.kind === 'video')
-    if (img) params.image_url = attachments.dataUrl(img.path)
+    // reference-to-video берёт фото как образец внешности (поле reference_image_urls), остальные — как первый кадр
+    if (isReferenceModel(req.model)) {
+      if (photos.length) params.reference_image_urls = photos.slice(0, MAX_REFERENCE_IMAGES).map((p) => attachments.dataUrl(p))
+    } else if (photos[0]) params.image_url = attachments.dataUrl(photos[0])
     if (vid) params.video_url = attachments.dataUrl(vid.path)
   }
   let stopped = false

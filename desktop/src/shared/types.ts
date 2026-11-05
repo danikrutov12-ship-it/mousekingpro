@@ -241,6 +241,7 @@ export interface SendRequest {
   fork?: { index: number; kind: 'edit' | 'regenerate' } // новая ветка с сообщения пользователя index
   op?: MediaOp // действие с картинкой: увеличить, убрать фон, изменить
   memory?: boolean // использовать память в этом чате (для нового чата)
+  refPaths?: string[] // фото набора референсов для reference-to-video
 }
 
 // События запуска агента/генерации, которые основной процесс шлёт в интерфейс

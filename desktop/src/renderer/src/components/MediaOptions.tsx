@@ -1,5 +1,6 @@
 import type { Mode, Model } from '@shared/types'
 import { Dropdown as Select, Stepper as Num } from './Dropdown'
+import { aspectForPhoto, isReferenceModel, LONG_VIDEO_SECONDS, seconds } from '@shared/video'
 
 type Params = Record<string, any>
 
@@ -16,7 +17,8 @@ function videoResolution(list: string[]): string {
 }
 
 /** Значения по умолчанию для параметров модели — по её ограничениям. */
-export function defaults(mode: Mode, m: Model | null): Params {
+/** photoRatio > 0 — к видео прикреплено фото: пропорции подбираются под него. */
+export function defaults(mode: Mode, m: Model | null, photoRatio = 0): Params {
   const c = m?.constraints || {}
   const p: Params = {}
   if (mode === 'image') {
@@ -32,9 +34,12 @@ export function defaults(mode: Mode, m: Model | null): Params {
     p.format = 'png'
     p.hide_watermark = true
   } else if (mode === 'video') {
-    if (c.durations?.length) p.duration = c.durations[0]
+    if (c.durations?.length) p.duration = c.durations.includes('5s') ? '5s' : c.durations[0]
     if (c.resolutions?.length) p.resolution = videoResolution(c.resolutions)
-    if (c.aspect_ratios?.length) p.aspect_ratio = c.aspect_ratios.includes('16:9') ? '16:9' : c.aspect_ratios[0]
+    if (c.aspect_ratios?.length) {
+      p.aspect_ratio = (photoRatio && aspectForPhoto(c.aspect_ratios, photoRatio))
+        || (c.aspect_ratios.includes('16:9') ? '16:9' : c.aspect_ratios[0])
+    }
     if (c.audio_configurable) p.audio = c.audio ?? true
   }
   return p
@@ -51,7 +56,7 @@ function Check({ label, value, onChange }: { label: string; value: boolean; onCh
 const QUALITY: Record<string, string> = { low: 'низкое', medium: 'среднее', high: 'высокое', auto: 'авто' }
 const fmtQuality = (v: any) => QUALITY[v] || String(v)
 const fmtDuration = (v: any) => (/^\d+s$/.test(v) ? `${parseInt(v)} с` : v === 'Auto' ? 'авто' : String(v))
-const fmtRatio = (v: any) => (v === 'auto' ? 'авто' : String(v))
+const fmtRatio = (v: any) => (v === 'auto' ? 'авто' : v === 'adaptive' ? 'как у фото' : String(v))
 
 const VIDEO_HINTS: Record<string, string> = {
   'image-to-video': 'Модель оживляет картинку: прикрепите изображение.',
@@ -59,7 +64,7 @@ const VIDEO_HINTS: Record<string, string> = {
   'text-to-video': 'Видео по описанию.',
 }
 
-export function MediaOptions({ mode, model, params, onChange }: { mode: Mode; model: Model | null; params: Params; onChange(p: Params): void }) {
+export function MediaOptions({ mode, model, params, onChange, photos = 0 }: { mode: Mode; model: Model | null; params: Params; onChange(p: Params): void; photos?: number }) {
   const c = model?.constraints || {}
   const upd = (k: string) => (v: any) => onChange({ ...params, [k]: v })
   if (mode === 'text' || !model) return null
@@ -95,7 +100,18 @@ export function MediaOptions({ mode, model, params, onChange }: { mode: Mode; mo
         options={[...c.resolutions].sort((a: string, b: string) => resRank(a) - resRank(b))} onChange={upd('resolution')} />}
       {c.aspect_ratios?.length > 0 && <Select label="Пропорции" value={params.aspect_ratio} options={c.aspect_ratios} onChange={upd('aspect_ratio')} format={fmtRatio} />}
       {c.audio_configurable && <Check label="Со звуком" value={!!params.audio} onChange={upd('audio')} />}
-      <div className="opt-hint">{VIDEO_HINTS[c.model_type] || ''} Генерация занимает от минуты до нескольких минут.</div>
+      <div className="opt-hint">
+        {isReferenceModel(model) ? 'Фото — образец внешности персонажа или предмета (до 30 фото), сцену модель строит сама.' : VIDEO_HINTS[c.model_type] || ''} Генерация занимает от минуты до нескольких минут.
+      </div>
+      {photos > 0 && c.model_type === 'text-to-video' && (
+        <div className="opt-warn">Эта модель делает видео только по тексту и не видит фото — при отправке возьму её вариант «image-to-video».</div>
+      )}
+      {photos > 0 && params.aspect_ratio && params.aspect_ratio !== 'adaptive' && params.aspect_ratio !== 'auto' && c.aspect_ratios?.includes('adaptive') && (
+        <div className="opt-warn">Пропорции отличаются от фото — модели придётся перестроить кадр, и сходство может пострадать. Лучше «как у фото».</div>
+      )}
+      {photos > 0 && seconds(params.duration) > LONG_VIDEO_SECONDS && (
+        <div className="opt-warn">Чем длиннее видео, тем сильнее уходит сходство с фото. Для точного сходства — 5–10 с.</div>
+      )}
     </div>
   )
 }

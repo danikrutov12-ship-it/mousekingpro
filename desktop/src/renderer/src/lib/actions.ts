@@ -3,6 +3,7 @@ import type { Attachment, Chat, EditModel, MediaOp, Message, Mode, Model, RunEve
 import { api } from './api'
 import { get, set, type Artifact, type PanelTab } from './store'
 import { baseName, fileUrl } from './format'
+import { aspectForPhoto, isReferenceModel, photoProblem, photoSibling } from '@shared/video'
 
 let toastId = 0
 export function toast(text: string, kind?: 'error' | 'ok') {
@@ -133,7 +134,7 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
     set({ settingsOpen: true })
     return false
   }
-  const model = extra.model || modelFor(mode)
+  let model = extra.model || modelFor(mode)
   if (!model) {
     toast('Модели ещё загружаются', 'error')
     return false
@@ -161,8 +162,45 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
     return false
   }
   if (mode === 'video') {
+    const photos = attachments.filter((a) => a.kind === 'image')
+    // фото к модели «только по тексту» — она его не увидит; берём её вариант для фото из той же серии
+    if (photos.length && model.constraints?.model_type === 'text-to-video') {
+      const sib = photoSibling(model, models.video)
+      if (!sib) {
+        toast(`${model.name} делает видео только по тексту и не увидит фото — выберите модель «image-to-video»`, 'error')
+        return false
+      }
+      toast(`${model.name} не видит фото — отправляю в ${sib.name}`, 'ok')
+      model = sib
+      if (params) {
+        const ratio = await imageSize(photos[0].path).then((s) => s.w / s.h).catch(() => 1)
+        const fit = (k: string, list?: string[]) => list?.length && !list.includes(params![k]) ? list[0] : params![k]
+        const c = sib.constraints || {}
+        params = { ...params, duration: fit('duration', c.durations), resolution: fit('resolution', c.resolutions),
+          aspect_ratio: aspectForPhoto(c.aspect_ratios, ratio) ?? undefined }
+      }
+    }
+    // размер и пропорции фото — проверяем до отправки, а не после ошибки поставщика
+    if (model.constraints?.model_type === 'image-to-video') {
+      for (const p of photos) {
+        const s = await imageSize(p.path).catch(() => null)
+        const problem = s && photoProblem(model, s.w, s.h)
+        if (problem) {
+          toast(problem, 'error')
+          return false
+        }
+      }
+    }
+    if (isReferenceModel(model)) {
+      const set_ = get().settings?.ref_sets.find((r) => r.id === get().refSet)
+      if (set_) extra = { ...extra, refPaths: set_.paths }
+      if (!photos.length && !set_) {
+        toast('Эта модель делает видео по образцу: прикрепите 1–30 фото человека или предмета', 'error')
+        return false
+      }
+    }
     const mtype = model.constraints?.model_type
-    if (mtype === 'image-to-video' && !attachments.some((a) => a.kind === 'image')) {
+    if (mtype === 'image-to-video' && !isReferenceModel(model) && !attachments.some((a) => a.kind === 'image')) {
       toast('Эта модель оживляет картинку — прикрепите изображение', 'error')
       return false
     }
@@ -194,6 +232,16 @@ export const avoidPart = (avoid: string) => avoid.trim()
   : ''
 
 /** Копирование картинки в буфер: сам файл без пересжатия, а webp и прочее — через холст в PNG без потерь. */
+/** Размер картинки в пикселях. */
+export function imageSize(path: string): Promise<{ w: number; h: number }> {
+  return new Promise((ok, fail) => {
+    const img = new Image()
+    img.onload = () => ok({ w: img.naturalWidth, h: img.naturalHeight })
+    img.onerror = () => fail(new Error('не удалось прочитать картинку'))
+    img.src = fileUrl(path)
+  })
+}
+
 export async function copyImage(path: string) {
   try {
     if (!(await api.clipboardImage(path))) {

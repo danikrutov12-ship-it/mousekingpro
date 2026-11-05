@@ -13,5 +13,10 @@ NODE_DIR="$HOME/.local/lib/nodejs/current/bin"
 git add desktop/package.json desktop/package-lock.json
 git commit -m "Mouse King Pro $VERSION"
 git tag -a "v$VERSION" -m "${NOTES:-Mouse King Pro $VERSION}"
-git push origin HEAD "v$VERSION"
+# токен GitHub (если есть) берётся из ~/.mkp-token и передаётся только этой команде — в git он не сохраняется
+AUTH=()
+if [ -s "$HOME/.mkp-token" ]; then
+  AUTH=(-c "http.extraheader=Authorization: Basic $(printf 'x-access-token:%s' "$(tr -d ' \r\n' < "$HOME/.mkp-token")" | base64 -w0)")
+fi
+git "${AUTH[@]}" push origin HEAD "v$VERSION"
 echo "Готово: v$VERSION отправлена. Сборка: https://github.com/danikrutov12-ship-it/mousekingpro/actions"

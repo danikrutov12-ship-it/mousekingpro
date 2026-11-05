@@ -1,0 +1,17 @@
+# зависимости и сборки
+node_modules/
+desktop/out/
+desktop/dist/
+# старая версия на Python
+.venv/
+__pycache__/
+*.pyc
+# локальное и секретное: ключи, токены, логи
+.env
+.env.*
+*.log
+*.pem
+*.key
+secrets.json
+.DS_Store
+desktop/shots/

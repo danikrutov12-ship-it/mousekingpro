@@ -1,0 +1,107 @@
+# Сборка Mouse King Pro для Windows и Linux.
+# Каждый push в main — проверка и тестовые сборки (скачать из вкладки Actions → Artifacts).
+# Тег vX.Y.Z — релиз на GitHub: установщик Windows, AppImage и файлы для автообновления.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win nsis
+          - os: ubuntu-latest
+            target: --linux AppImage
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - run: npm ci
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      - name: Сборка
+        run: npx electron-vite build
+
+      - name: Пакет (без публикации)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: npx electron-builder ${{ matrix.target }} --publish never
+
+      - name: Пакет и релиз
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: npx electron-builder ${{ matrix.target }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # запуск собранной программы на чистой Windows и снимки экрана — видно, что всё открывается
+      - name: Проверка запуска (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:VA_SHOT = "$PWD\shots"
+          $env:VA_SCRIPT = "$PWD\test\smoke.json"
+          $p = Start-Process -FilePath "dist\win-unpacked\mouse-king-pro.exe" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'программа не завершилась за 2 минуты' }
+          Get-ChildItem shots
+          if ((Get-ChildItem shots -Filter *.png).Count -lt 4) { throw 'не все снимки сделаны' }
+
+      - name: Проверка запуска (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          VA_SHOT=$PWD/shots VA_SCRIPT=$PWD/test/smoke.json timeout 120 \
+            dist/linux-unpacked/mouse-king-pro --no-sandbox --ozone-platform=headless --disable-gpu || true
+          ls shots
+          test $(ls shots/*.png | wc -l) -ge 4
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-${{ runner.os }}
+          path: desktop/shots
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          name: Mouse-King-Pro-${{ runner.os }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # текст «Что нового» в релизе берётся из описания тега (./release.sh 2.2.0 "Что нового")
+  notes:
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          NOTES=$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")
+          gh release edit "$GITHUB_REF_NAME" --title "Mouse King Pro ${GITHUB_REF_NAME#v}" --notes "$NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,7 @@
+[
+  ["", 3000, "01-main"],
+  ["__va.set({ settingsOpen: false, view: { page: 'chat' } })", 800, null],
+  ["__va.set({ panel: { tab: 'terminal' } })", 4000, "02-terminal"],
+  ["__va.set({ panel: null, view: { page: 'gallery' } })", 1500, "03-gallery"],
+  ["__va.set({ view: { page: 'chat' }, update: { status: 'available', current: '0', mode: 'installer', version: '9.9.9', notes: '- проверка плашки' } })", 1500, "04-update-banner"]
+]

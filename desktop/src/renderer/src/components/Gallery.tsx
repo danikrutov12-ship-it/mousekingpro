@@ -23,8 +23,8 @@ const SOURCE: Record<GalleryItem['source'], string> = {
 }
 export const isVideo = (path: string) => /\.(mp4|webm|mov|mkv)$/i.test(path)
 const FILTERS: [string, string, (i: GalleryItem) => boolean][] = [
-  ['all', 'Все', () => true], ['fav', 'Избранное', (i) => !!i.favorite], ['gen', 'Сгенерированные', (i) => i.source === 'generate'], ['video', 'Видео', (i) => i.source === 'video' || isVideo(i.path)],
-  ['edits', 'Правки и версии', (i) => !!i.parent && !isVideo(i.path)], ['own', 'Свои фото', (i) => i.source === 'own'],
+  ['all', 'Все', () => true], ['fav', 'Избранное', (i) => !!i.favorite], ['gen', 'Сгенерированные', (i) => i.source === 'generate'],
+  ['edits', 'Правки и версии', (i) => !!i.parent && !isVideo(i.path)], ['own', 'Свои фото', (i) => i.source === 'own'], ['video', 'Видео', (i) => i.source === 'video' || isVideo(i.path)],
 ]
 
 let galleryCache: GalleryItem[] = []

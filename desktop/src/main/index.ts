@@ -421,7 +421,15 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
       } catch (e) {
         msg = { role: 'assistant', content: (e as Error).message, _error: true }
       }
-    } else msg = await generateMedia(settings, 'video', req.model, params, join(root, 'generated'), root, status, () => stopped)
+    } else {
+      msg = await generateMedia(settings, 'video', req.model, params, join(root, 'generated'), root, status, () => stopped)
+      // видео — в галерею; если делали по фото, оно становится «версией» этого фото
+      const photo = req.attachments.find((a) => a.kind === 'image')?.path || req.refPaths?.[0]
+      for (const p of msg._media || []) {
+        gallery.add({ path: p, source: 'video', prompt: req.text, model: req.model.id, params: req.params, cost: msg._cost ?? undefined,
+          parent: photo ? gallery.ensure(photo, project.id).id : undefined, projectId: project.id, chatId: chat.id })
+      }
+    }
     push(msg)
   } finally {
     active.delete(chat.id)

@@ -7,7 +7,7 @@ import { APP_DIR } from './config'
 import * as store from './store'
 
 const FILE = join(APP_DIR, 'gallery.json')
-let cache: { imported: boolean; deduped?: boolean; items: GalleryItem[] } | null = null
+let cache: { imported: boolean; deduped?: boolean; videos?: boolean; items: GalleryItem[] } | null = null
 
 export const hashOf = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex')
 
@@ -68,7 +68,7 @@ export function ensure(path: string, projectId?: string): GalleryItem {
     persist()
     return same
   }
-  return add({ path, source: 'own', prompt: '', projectId, hash })
+  return add({ path, source: /\.(mp4|webm|mov|mkv)$/i.test(path) ? 'video' : 'own', prompt: '', projectId, hash })
 }
 
 /** Один раз: склеиваем уже накопившиеся одинаковые «свои фото». Файлы не трогаем — на них ссылаются чаты. */
@@ -95,7 +95,35 @@ function dedupeOwn() {
 export function list(): GalleryItem[] {
   if (!load().imported) importFromChats()
   if (!load().deduped) dedupeOwn()
+  if (!load().videos) importVideos()
   return load().items.filter((i) => existsSync(i.path)).sort((a, b) => b.created - a.created)
+}
+
+const VIDEO_RE = /\.(mp4|webm|mov|mkv)$/i
+
+/** Один раз: видео, сделанные до появления их в галерее, — из истории чатов. */
+function importVideos() {
+  for (const p of store.projects()) {
+    for (const c of store.chats(p.id)) {
+      const chat = store.loadChat(p.id, c.id)
+      if (!chat) continue
+      let user: (typeof chat.messages)[number] | undefined
+      for (const m of chat.messages) {
+        if (m.role === 'user' && !m._hidden) user = m
+        for (const path of m._media || []) {
+          if (!VIDEO_RE.test(path) || !existsSync(path) || byPath(path)) continue
+          const photo = (user?._attachments || []).map((a: any) => (typeof a === 'string' ? a : a?.path)).find((x: string) => x && /\.(png|jpe?g|webp)$/i.test(x) && existsSync(x))
+          load().items.push({
+            id: randomBytes(5).toString('hex'), path, prompt: user?._display || '', model: user?._gen?.model, params: user?._gen?.params,
+            source: 'video', projectId: p.id, chatId: chat.id, created: statSync(path).mtimeMs / 1000, cost: m._cost ?? undefined,
+            parent: photo ? byPath(photo)?.id : undefined,
+          })
+        }
+      }
+    }
+  }
+  load().videos = true
+  persist()
 }
 
 const SOURCE_BY_LABEL: [RegExp, GalleryItem['source']][] = [

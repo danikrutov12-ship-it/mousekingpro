@@ -1,6 +1,6 @@
 import {
   Check, CheckSquare, Columns2, Combine, Copy, Eraser, ExternalLink, Film, FolderOpen, Heart, Images, Layers, ListChecks, Loader2,
-  MessageSquarePlus, MessageSquareText, Paintbrush, Save, Search, Shuffle, Trash2, Wand2, X, ZoomIn,
+  MessageSquarePlus, MessageSquareText, Paintbrush, Play, Save, Search, Shuffle, Trash2, Wand2, X, ZoomIn,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -19,11 +19,12 @@ import { Modal } from './Modal'
 
 const SOURCE: Record<GalleryItem['source'], string> = {
   generate: 'сгенерирована', upscale: 'увеличена', background: 'без фона', edit: 'правка', combine: 'объединение',
-  local: 'ручная правка', own: 'своё фото', batch: 'пакетная обработка',
+  local: 'ручная правка', own: 'своё фото', batch: 'пакетная обработка', video: 'видео',
 }
+export const isVideo = (path: string) => /\.(mp4|webm|mov|mkv)$/i.test(path)
 const FILTERS: [string, string, (i: GalleryItem) => boolean][] = [
-  ['all', 'Все', () => true], ['fav', 'Избранное', (i) => !!i.favorite], ['gen', 'Сгенерированные', (i) => i.source === 'generate'],
-  ['edits', 'Правки и версии', (i) => !!i.parent], ['own', 'Свои фото', (i) => i.source === 'own'],
+  ['all', 'Все', () => true], ['fav', 'Избранное', (i) => !!i.favorite], ['gen', 'Сгенерированные', (i) => i.source === 'generate'], ['video', 'Видео', (i) => i.source === 'video' || isVideo(i.path)],
+  ['edits', 'Правки и версии', (i) => !!i.parent && !isVideo(i.path)], ['own', 'Свои фото', (i) => i.source === 'own'],
 ]
 
 let galleryCache: GalleryItem[] = []
@@ -107,6 +108,7 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
     setBusy('')
   }
   const pid = cur.projectId
+  const video = isVideo(cur.path)
   // Ctrl+C — копировать открытую картинку (если не выделен текст и не открыт полноэкранный просмотр — у него свой обработчик)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -120,18 +122,19 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
         onClose()
         return
       }
-      if (!isCopyKey(e)) return
+      if (!isCopyKey(e) || video) return
       e.preventDefault()
       copyImage(cur.path)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cur.path, editor, maskOpen, editPrompt, compare, onClose])
+  }, [cur.path, video, editor, maskOpen, editPrompt, compare, onClose])
   return (
     <div className="viewer-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <motion.div className="viewer" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
         <div className="viewer-main">
-          {compare ? <CompareSlider a={compare.path} b={cur.path} /> : <img src={fileUrl(cur.path)} onClick={() => set({ lightbox: cur.path })} />}
+          {video ? <video key={cur.path} className="viewer-video" src={fileUrl(cur.path)} controls autoPlay loop playsInline />
+            : compare ? <CompareSlider a={compare.path} b={cur.path} /> : <img src={fileUrl(cur.path)} onClick={() => set({ lightbox: cur.path })} />}
           <button className="icon-btn viewer-close" title="Закрыть (Esc)" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="viewer-side">
@@ -140,7 +143,7 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
             {cur.cost != null && <span className="sub">{money(cur.cost)}</span>}
             <span className="sub">{ago(cur.created)}</span>
             <div style={{ flex: 1 }} />
-            <button className="icon-btn sm" title="Копировать картинку (Ctrl+C)" onClick={() => copyImage(cur.path)}><Copy size={15} /></button>
+            {!video && <button className="icon-btn sm" title="Копировать картинку (Ctrl+C)" onClick={() => copyImage(cur.path)}><Copy size={15} /></button>}
             <button className={`icon-btn sm ${cur.favorite ? 'active' : ''}`} title="В избранное" onClick={() => run('fav', () => api.gallery.update(cur.id, { favorite: !cur.favorite }).then(() => setCur({ ...cur, favorite: !cur.favorite })))}>
               <Heart size={15} fill={cur.favorite ? 'currentColor' : 'none'} />
             </button>
@@ -158,8 +161,8 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
                     setCur(it)
                     setCompare(null)
                   }}>
-                    <img src={fileUrl(it.path)} /><span>{SOURCE[it.source]}</span>
-                    {it.id !== cur.id && <span className="v-cmp" title="Сравнить с текущей" onClick={(e) => {
+                    {isVideo(it.path) ? <video src={fileUrl(it.path) + '#t=0.1'} muted preload="metadata" /> : <img src={fileUrl(it.path)} />}<span>{SOURCE[it.source]}</span>
+                    {it.id !== cur.id && !video && !isVideo(it.path) && <span className="v-cmp" title="Сравнить с текущей" onClick={(e) => {
                       e.stopPropagation()
                       setCompare(compare?.id === it.id ? null : it)
                     }}><Columns2 size={13} /></span>}
@@ -169,6 +172,20 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
               {compare && <div className="sub" style={{ marginTop: 6 }}>Сравнение: двигайте границу мышью. <a onClick={() => setCompare(null)}>Выйти</a></div>}
             </>
           )}
+          {video && (
+            <>
+              <div className="list-title" style={{ margin: '12px 0 6px' }}>Действия</div>
+              <div className="actions-grid">
+                <button className="act" onClick={() => api.shell.open(cur.path)}><Play size={15} />Открыть в плеере</button>
+                <button className="act" onClick={() => {
+                  onClose()
+                  toNewChat(cur.path)
+                }}><MessageSquarePlus size={15} />В новый чат</button>
+                {parent && <button className="act" onClick={() => set({ lightbox: parent.path })}><Images size={15} />Исходное фото</button>}
+              </div>
+            </>
+          )}
+          {!video && <>
           <div className="list-title" style={{ margin: '12px 0 6px' }}>Действия</div>
           <div className="actions-grid">
             <button className="act" disabled={!!busy} onClick={() => run('x2', () => api.gallery.op({ kind: 'upscale', path: cur.path, scale: 2 }, pid))}><ZoomIn size={15} />Увеличить ×2<span>$0.02</span></button>
@@ -234,6 +251,7 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
               }}>{l}</button>
             ))}
           </div>
+          </>}
           {busy && <div className="sub" style={{ margin: '10px 0' }}><Loader2 size={14} className="spin" /> Работаю…</div>}
           {text && (
             <div className="describe-out">
@@ -246,7 +264,7 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
           )}
           <div className="viewer-foot">
             <button className="meta-btn" onClick={() => api.gallery.saveAs(cur.path).then((p) => p && toast('Сохранено: ' + p, 'ok'))}><Save size={13} />Сохранить как…</button>
-            <button className="meta-btn" onClick={() => api.gallery.openWith(cur.path).then((a) => a && toast(`Открываю в ${a.toUpperCase()}`, 'ok'))}><ExternalLink size={13} />Открыть в редакторе</button>
+            {!video && <button className="meta-btn" onClick={() => api.gallery.openWith(cur.path).then((a) => a && toast(`Открываю в ${a.toUpperCase()}`, 'ok'))}><ExternalLink size={13} />Открыть в редакторе</button>}
             <button className="meta-btn" onClick={() => api.shell.reveal(cur.path)}><FolderOpen size={13} />В папке</button>
             {cur.chatId && cur.projectId && <button className="meta-btn" onClick={() => {
               onClose()
@@ -362,16 +380,27 @@ export function GalleryPage() {
             <span className="sub" style={{ marginLeft: 'auto' }}>{list.length} из {items.length}</span>
           </div>
           {!items.length ? (
-            <div className="empty-state"><div className="big"><Images size={30} /></div><h3>Здесь будут все ваши картинки</h3>
-              <p>Сгенерированные, увеличенные, отредактированные — из всех чатов.<br />Свои фото можно обработать пачкой: кнопка «Пакетная обработка».</p></div>
+            <div className="empty-state"><div className="big"><Images size={30} /></div><h3>Здесь будут все ваши картинки и видео</h3>
+              <p>Сгенерированные, увеличенные, отредактированные и видео — из всех чатов.<br />Свои фото можно обработать пачкой: кнопка «Пакетная обработка».</p></div>
           ) : (
             <div className="gallery-grid">
               {list.map((it, n) => (
                 <motion.button key={it.id} className={`g-item ${sel.includes(it.id) ? 'sel' : ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(n, 30) * 0.015 }} onClick={() => (selecting ? toggle(it.id) : setOpen(it))}>
-                  <img src={fileUrl(it.path)} loading="lazy" draggable={false} />
+                  {isVideo(it.path) ? (
+                    <>
+                      {/* превью — первый кадр; при наведении видео проигрывается без звука */}
+                      <video src={fileUrl(it.path) + '#t=0.1'} muted loop playsInline preload="metadata"
+                        onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.pause()
+                          e.currentTarget.currentTime = 0.1
+                        }} />
+                      <span className="g-play"><Play size={13} fill="currentColor" /></span>
+                    </>
+                  ) : <img src={fileUrl(it.path)} loading="lazy" draggable={false} />}
                   {it.favorite && <span className="g-fav"><Heart size={13} fill="currentColor" /></span>}
-                  {it.parent && <span className="g-badge">{SOURCE[it.source]}</span>}
+                  {it.parent && !isVideo(it.path) && <span className="g-badge">{SOURCE[it.source]}</span>}
                   {selecting && <span className={`g-check ${sel.includes(it.id) ? 'on' : ''}`}>{sel.includes(it.id) && <Check size={14} />}</span>}
                   {!selecting && it.prompt && <span className="g-cap">{it.prompt}</span>}
                 </motion.button>

@@ -52,7 +52,7 @@ export interface GalleryItem {
   prompt: string
   model?: string
   params?: Record<string, any>
-  source: 'generate' | 'upscale' | 'background' | 'edit' | 'combine' | 'local' | 'own' | 'batch'
+  source: 'generate' | 'upscale' | 'background' | 'edit' | 'combine' | 'local' | 'own' | 'batch' | 'video'
   parent?: string      // id версии, из которой сделана эта
   projectId?: string
   chatId?: string

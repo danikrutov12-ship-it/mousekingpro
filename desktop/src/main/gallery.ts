@@ -1,5 +1,5 @@
 // Реестр картинок для галереи: откуда взялась, какой промпт и модель, от какой версии сделана.
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { GalleryItem } from '@shared/types'
@@ -7,7 +7,15 @@ import { APP_DIR } from './config'
 import * as store from './store'
 
 const FILE = join(APP_DIR, 'gallery.json')
-let cache: { imported: boolean; items: GalleryItem[] } | null = null
+let cache: { imported: boolean; deduped?: boolean; items: GalleryItem[] } | null = null
+
+export const hashOf = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex')
+
+/** Хеш записи (считается один раз и сохраняется). */
+function hashed(it: GalleryItem): string {
+  if (!it.hash && existsSync(it.path)) it.hash = hashOf(it.path)
+  return it.hash || ''
+}
 
 function load() {
   if (cache) return cache
@@ -33,7 +41,7 @@ export function add(item: Omit<GalleryItem, 'id' | 'created'> & { created?: numb
   return full
 }
 
-export const byPath = (path: string) => load().items.find((i) => i.path === path)
+export const byPath = (path: string) => load().items.find((i) => i.path === path || i.aliases?.includes(path))
 export const byId = (id: string) => load().items.find((i) => i.id === id)
 
 export function update(id: string, patch: Partial<GalleryItem>) {
@@ -50,11 +58,43 @@ export function remove(ids: string[]) {
 
 /** Исходная картинка без записи в реестре (своё фото) — регистрируем как «своё». */
 export function ensure(path: string, projectId?: string): GalleryItem {
-  return byPath(path) || add({ path, source: 'own', prompt: '', projectId })
+  const known = byPath(path)
+  if (known) return known
+  // то же фото, прикреплённое ещё раз (копия в uploads под другим именем), — это одна запись, а не новая
+  const hash = hashOf(path)
+  const same = load().items.find((i) => hashed(i) === hash)
+  if (same) {
+    same.aliases = [...(same.aliases || []), path]
+    persist()
+    return same
+  }
+  return add({ path, source: 'own', prompt: '', projectId, hash })
+}
+
+/** Один раз: склеиваем уже накопившиеся одинаковые «свои фото». Файлы не трогаем — на них ссылаются чаты. */
+function dedupeOwn() {
+  const c = load()
+  const keep = new Map<string, GalleryItem>()
+  const gone = new Map<string, GalleryItem>() // id дубля → оставленная запись
+  for (const it of [...c.items].sort((a, b) => a.created - b.created)) {
+    if (it.source !== 'own' || !existsSync(it.path)) continue
+    const first = keep.get(hashed(it))
+    if (!first) keep.set(it.hash!, it)
+    else {
+      first.aliases = [...new Set([...(first.aliases || []), it.path, ...(it.aliases || [])])]
+      first.favorite ||= it.favorite
+      gone.set(it.id, first)
+    }
+  }
+  for (const it of c.items) if (it.parent && gone.has(it.parent)) it.parent = gone.get(it.parent)!.id
+  c.items = c.items.filter((i) => !gone.has(i.id))
+  c.deduped = true
+  persist()
 }
 
 export function list(): GalleryItem[] {
   if (!load().imported) importFromChats()
+  if (!load().deduped) dedupeOwn()
   return load().items.filter((i) => existsSync(i.path)).sort((a, b) => b.created - a.created)
 }
 

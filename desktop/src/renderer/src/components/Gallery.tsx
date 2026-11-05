@@ -293,7 +293,7 @@ export function ViewerHost() {
     // своё фото из файлов проекта — сначала добавляем в галерею
     api.gallery.ensure(path).then(reloadGallery).then(() => setItems(galleryCache))
   }, [path])
-  const item = path ? items.find((i) => i.path === path) : null
+  const item = path ? items.find((i) => i.path === path || i.aliases?.includes(path)) : null
   if (!path || !item) return null
   return <Viewer item={item} items={items} onClose={() => set({ viewer: null })} />
 }

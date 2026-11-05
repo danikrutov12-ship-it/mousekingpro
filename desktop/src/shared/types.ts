@@ -60,6 +60,8 @@ export interface GalleryItem {
   cost?: number
   seed?: number
   favorite?: boolean
+  hash?: string        // sha256 содержимого — одно и то же фото не заводим дважды
+  aliases?: string[]   // другие пути к тому же файлу (повторные вложения)
 }
 
 export interface SavedPrompt { id: string; title: string; text: string }

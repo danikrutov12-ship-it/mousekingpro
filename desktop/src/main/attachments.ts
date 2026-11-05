@@ -1,5 +1,6 @@
 // Вложения: копирование в папку проекта, распаковка архивов, текст для модели.
-import { copyFileSync, mkdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { hashOf } from './gallery'
 import { basename, extname, join, relative, sep } from 'node:path'
 import type { Attachment } from '@shared/types'
 import { freePath } from './store'
@@ -20,6 +21,24 @@ export function dataUrl(path: string): string {
   return `data:${mime};base64,${readFileSync(path).toString('base64')}`
 }
 
+/** Файл с тем же содержимым в папке (сравниваем размер, потом sha256). */
+function sameFile(dir: string, src: string): string | null {
+  const size = statSync(src).size
+  let hash = ''
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    try {
+      const st = statSync(p)
+      if (!st.isFile() || st.size !== size) continue
+      hash ||= hashOf(src)
+      if (hashOf(p) === hash) return p
+    } catch {
+      // файл исчез — пропускаем
+    }
+  }
+  return null
+}
+
 export async function prepare(srcPath: string, rootPath: string): Promise<Attachment> {
   mkdirSync(rootPath, { recursive: true })
   const root = realpathSync(rootPath)
@@ -29,8 +48,9 @@ export async function prepare(srcPath: string, rootPath: string): Promise<Attach
   if (!inside(root, src)) {
     const uploads = join(root, 'uploads')
     mkdirSync(uploads, { recursive: true })
-    dest = freePath(uploads, basename(src))
-    copyFileSync(src, dest)
+    // этот файл уже лежит в uploads (прикрепляли раньше) — берём его, а не делаем ещё одну копию
+    dest = sameFile(uploads, src) || freePath(uploads, basename(src))
+    if (dest !== src && !existsSync(dest)) copyFileSync(src, dest)
   }
   const att: Attachment = { kind: 'binary', name: basename(src), path: dest, rel: relative(root, dest), size: statSync(dest).size }
   const ext = extname(dest).toLowerCase()

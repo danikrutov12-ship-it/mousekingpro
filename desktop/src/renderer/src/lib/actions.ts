@@ -149,7 +149,7 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
       }
       const editModel = get().settings?.edit_model || 'qwen-edit-uncensored'
       const max = editMax(editModel)
-      const prompt = text + (get().keepRest ? KEEP_REST : '') + (set_ && refs.length > 1 ? `\n\nНа референсах (${set_.name}) — тот же человек/предмет: сохрани его внешность и черты точно.` : '')
+      const prompt = text + avoidPart(get().avoid) + (get().keepRest ? KEEP_REST : '') + (set_ && refs.length > 1 ? `\n\nНа референсах (${set_.name}) — тот же человек/предмет: сохрани его внешность и черты точно.` : '')
       const op: MediaOp = refs.length === 1 ? { kind: 'edit', path: refs[0], prompt, model: editModel }
         : { kind: 'combine', paths: refs.slice(0, max), prompt, model: editModel }
       if (refs.length > max) toast(`Модель принимает до ${max} фото — лишние не отправлены`, 'error')
@@ -187,6 +187,11 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
   } as SendRequest)
   return true
 }
+
+/** У правки по фото нет поля негативного промпта в Venice — передаём запреты текстом. */
+export const avoidPart = (avoid: string) => avoid.trim()
+  ? `\n\nНе должно быть на результате (avoid, do NOT add or show): ${avoid.trim().replace(/[.\s]+$/, '')}.`
+  : ''
 
 export const KEEP_REST = '\n\nИзмени только то, о чём просят. Всё остальное — лицо и черты людей, позу, фон, композицию, свет, цвета, ' +
   'текстуры и детали — оставь точно как на исходном фото.'

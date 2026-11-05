@@ -35,6 +35,7 @@ export interface State {
   viewer: string | null // путь картинки, открытой в просмотре галереи
   refSet: string | null // выбранный набор референсов
   keepRest: boolean     // при правке по фото: не менять остальное
+  avoid: string         // при правке по фото: чего не должно быть (аналог негативного промпта)
   approvals: ApprovalReq[]
   mode: Mode
   draft: string
@@ -70,6 +71,7 @@ let state: State = {
   viewer: null,
   refSet: null,
   keepRest: true,
+  avoid: '',
   approvals: [],
   mode: 'text',
   draft: '',

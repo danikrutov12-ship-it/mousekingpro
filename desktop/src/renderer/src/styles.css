@@ -946,6 +946,9 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .ref-model { width: auto; max-width: 300px; height: 30px; padding: 0 28px 0 10px; font-size: 12.5px; }
 .ref-keep { display: flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
 .ref-keep input { accent-color: var(--accent); }
+.ref-avoid { flex-basis: 100%; display: flex; align-items: center; gap: 7px; padding: 0 6px 0 9px; height: 30px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+.ref-avoid:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.ref-avoid input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 12.5px var(--sans); color: var(--text); }
 .pt-btn.on { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
 .ref-mini { display: inline-flex; margin-right: 4px; } .ref-mini img { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; margin-left: -6px; border: 1.5px solid var(--surface); } .ref-mini img:first-child { margin-left: 0; }
 .menu-item.on { background: var(--accent-soft); color: var(--accent-text); }

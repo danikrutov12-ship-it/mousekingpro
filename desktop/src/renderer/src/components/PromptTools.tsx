@@ -1,4 +1,4 @@
-import { BookmarkPlus, Images, Library, Loader2, Palette, Plus, Sparkles, Trash2, Undo2, X } from 'lucide-react'
+import { Ban, BookmarkPlus, Images, Library, Loader2, Palette, Plus, Sparkles, Trash2, Undo2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { EditModel, RefSet, SavedPrompt } from '@shared/types'
 import { loadEditModels, saveSettings, toast } from '../lib/actions'
@@ -36,6 +36,7 @@ function RefBar() {
   const refSet = useApp((s) => s.settings?.ref_sets.find((r) => r.id === s.refSet))
   const editModel = useApp((s) => s.settings?.edit_model || 'qwen-edit-uncensored')
   const keepRest = useApp((s) => s.keepRest)
+  const avoid = useApp((s) => s.avoid)
   const [models, setModels] = useState<EditModel[]>([])
   useEffect(() => {
     loadEditModels().then(setModels)
@@ -56,6 +57,13 @@ function RefBar() {
       <label className="ref-keep" title="Добавить к описанию просьбу не трогать лицо, фон, композицию и всё, о чём вы не просили">
         <input type="checkbox" checked={keepRest} onChange={(e) => set({ keepRest: e.target.checked })} />Не менять остальное
       </label>
+      <div className="ref-avoid">
+        <Ban size={13} />
+        <input placeholder="Чего не должно быть: надписи, лишние люди, размытие…" value={avoid}
+          title="У правки по фото нет отдельного негативного промпта — это добавится к запросу как запрет"
+          onChange={(e) => set({ avoid: e.target.value })} />
+        {avoid && <button className="icon-btn sm" title="Очистить" onClick={() => set({ avoid: '' })}><X size={12} /></button>}
+      </div>
     </div>
   )
 }

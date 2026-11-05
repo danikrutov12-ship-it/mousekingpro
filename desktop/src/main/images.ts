@@ -83,7 +83,7 @@ export function pngMeta(file: string, entries: Record<string, string>) {
 }
 
 /** В галерею и подписи — только просьба пользователя, без служебных инструкций модели («не меняй остальное», маска). */
-const userPart = (prompt?: string) => (prompt || '').split('\n\nИзмени только')[0].replace(/^Второе изображение — служебная маска[\s\S]*?Задача: /, '').trim()
+const userPart = (prompt?: string) => (prompt || '').split(/\n\n(?:Измени только|Не должно быть на результате)/)[0].replace(/^Второе изображение — служебная маска[\s\S]*?Задача: /, '').trim()
 
 function register(path: string, meta: Partial<GalleryItem> & { source: GalleryItem['source'] }, ctx: ImgCtx): GalleryItem {
   meta = { ...meta, prompt: userPart(meta.prompt) }

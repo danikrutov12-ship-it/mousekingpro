@@ -273,6 +273,14 @@ export function imageOp(op: MediaOp) {
 }
 
 /** «Оживить»: режим видео, модель «картинка → видео», картинка уже прикреплена. */
+/** Новый чат с этой картинкой во вложениях (режим «Картинка» — сразу можно просить правку). */
+export async function toNewChat(path: string) {
+  await newChat()
+  set({ mode: 'image', attachments: [], viewer: null, lightbox: null })
+  await attachPaths([path])
+  set((s) => ({ focusTick: s.focusTick + 1 }))
+}
+
 export async function animate(path: string) {
   const { models, settings } = get()
   const i2v = (m: Model) => m.constraints?.model_type === 'image-to-video'

@@ -869,7 +869,9 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .viewer { width: min(1400px, 100%); height: min(900px, 100%); display: flex; background: var(--bg-panel); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-lg); }
 .viewer-main { flex: 1; min-width: 0; position: relative; display: grid; place-items: center; background: repeating-conic-gradient(var(--surface-2) 0% 25%, var(--bg-panel) 0% 50%) 50% / 20px 20px; }
 .viewer-main > img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; }
-.viewer-close { position: absolute; top: 12px; left: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.viewer-close { position: absolute; z-index: 5; top: 12px; left: 12px; width: 38px; height: 38px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.viewer-close::before { content: ''; position: absolute; inset: -8px; } /* зона клика шире самой кнопки */
+.viewer-close:hover { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 .viewer-side { width: 420px; flex: none; overflow-y: auto; padding: 16px 18px; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
 .viewer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .viewer-prompt { font: 14px/1.55 var(--serif); margin-bottom: 6px; }

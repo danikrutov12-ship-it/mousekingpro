@@ -1,12 +1,12 @@
 import {
   Check, CheckSquare, Columns2, Combine, Copy, Eraser, ExternalLink, Film, FolderOpen, Heart, Images, Layers, ListChecks, Loader2,
-  MessageSquareText, Paintbrush, Save, Search, Shuffle, Trash2, Wand2, X, ZoomIn,
+  MessageSquarePlus, MessageSquareText, Paintbrush, Save, Search, Shuffle, Trash2, Wand2, X, ZoomIn,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { money } from '@shared/pricing'
 import type { GalleryItem } from '@shared/types'
-import { animate, copyImage, isCopyKey, KEEP_REST, openChat, refreshBalance, toast } from '../lib/actions'
+import { animate, copyImage, isCopyKey, KEEP_REST, toNewChat, openChat, refreshBalance, toast } from '../lib/actions'
 import { api } from '../lib/api'
 import { ago, fileUrl, baseName } from '../lib/format'
 import { get, set, useApp } from '../lib/store'
@@ -110,19 +110,29 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
   // Ctrl+C — копировать открытую картинку (если не выделен текст и не открыт полноэкранный просмотр — у него свой обработчик)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!isCopyKey(e) || get().lightbox) return
+      if (get().lightbox) return // у полноэкранного просмотра свои клавиши
+      if (e.key === 'Escape') {
+        // сначала закрываются вложенные окна (редактор, маска, поле правки), потом сам просмотр
+        if (editor || maskOpen) return
+        if (editPrompt !== null) return setEditPrompt(null)
+        if (compare) return setCompare(null)
+        e.preventDefault()
+        onClose()
+        return
+      }
+      if (!isCopyKey(e)) return
       e.preventDefault()
       copyImage(cur.path)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cur.path])
+  }, [cur.path, editor, maskOpen, editPrompt, compare, onClose])
   return (
     <div className="viewer-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <motion.div className="viewer" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
         <div className="viewer-main">
           {compare ? <CompareSlider a={compare.path} b={cur.path} /> : <img src={fileUrl(cur.path)} onClick={() => set({ lightbox: cur.path })} />}
-          <button className="icon-btn viewer-close" onClick={onClose}><X size={18} /></button>
+          <button className="icon-btn viewer-close" title="Закрыть (Esc)" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="viewer-side">
           <div className="viewer-head">
@@ -169,6 +179,10 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
               <button className="act" disabled={!!busy} onClick={() => run('var', () => api.gallery.op({ kind: 'variations', id: cur.id }, pid))}><Shuffle size={15} />Ещё 4 похожих</button>
             )}
             <button className="act" onClick={() => setEditor(true)}><Paintbrush size={15} />Редактор: обрезка, цвет</button>
+            <button className="act" onClick={() => {
+              onClose()
+              toNewChat(cur.path)
+            }}><MessageSquarePlus size={15} />В новый чат</button>
             <button className="act" onClick={() => {
               onClose()
               set({ view: { page: 'chat' } })

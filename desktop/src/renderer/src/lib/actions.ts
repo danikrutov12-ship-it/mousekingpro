@@ -193,6 +193,33 @@ export const avoidPart = (avoid: string) => avoid.trim()
   ? `\n\nНе должно быть на результате (avoid, do NOT add or show): ${avoid.trim().replace(/[.\s]+$/, '')}.`
   : ''
 
+/** Копирование картинки в буфер: сам файл без пересжатия, а webp и прочее — через холст в PNG без потерь. */
+export async function copyImage(path: string) {
+  try {
+    if (!(await api.clipboardImage(path))) {
+      const img = new Image()
+      img.src = fileUrl(path)
+      await img.decode()
+      const c = document.createElement('canvas')
+      c.width = img.naturalWidth
+      c.height = img.naturalHeight
+      c.getContext('2d')!.drawImage(img, 0, 0)
+      const blob: Blob = await new Promise((ok) => c.toBlob((b) => ok(b!), 'image/png'))
+      await api.clipboardImageData(new Uint8Array(await blob.arrayBuffer()))
+    }
+    toast('Картинка скопирована — вставьте Ctrl+V', 'ok')
+  } catch (e) {
+    toast(`Не удалось скопировать: ${(e as Error).message}`, 'error')
+  }
+}
+
+/** Ctrl+C в просмотре картинки — если пользователь не выделил текст и не печатает в поле. */
+export function isCopyKey(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  return (e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'с') && !e.shiftKey
+    && !/^(INPUT|TEXTAREA)$/.test(t.tagName) && !t.isContentEditable && !window.getSelection()?.toString()
+}
+
 export const KEEP_REST = '\n\nИзмени только то, о чём просят. Всё остальное — лицо и черты людей, позу, фон, композицию, свет, цвета, ' +
   'текстуры и детали — оставь точно как на исходном фото.'
 

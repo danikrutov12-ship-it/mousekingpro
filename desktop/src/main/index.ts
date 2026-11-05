@@ -7,7 +7,7 @@ import { createTwoFilesPatch } from 'diff'
 import { homedir, tmpdir, userInfo } from 'node:os'
 import { basename, dirname, join, relative } from 'node:path'
 import { imagePrice } from '@shared/pricing'
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, Notification, session, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, nativeTheme, Notification, session, shell } from 'electron'
 import type { ApprovalAnswer, Attachment, BatchOp, Chat, McpServer, MediaOp, Message, Mode, Model, Project, RunEvent, Schedule, SendRequest, Server, Settings } from '@shared/types'
 import { AgentRun, generateMedia } from './agent'
 import * as attachments from './attachments'
@@ -653,6 +653,17 @@ function handlers() {
   })
   h('spend', () => ({ today: spend.today(), limitDay: loadSettings().limit_day_usd }))
   h('install', () => installDesktopEntry())
+  // исходные пиксели файла (PNG/JPEG) — без пересжатия
+  const copyPng = (png: Buffer) => clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(png)], { type: 'image/png' }) })])
+  h('clipboard:image', async (_e, path: string) => {
+    // PNG — байты файла как есть; JPEG — те же пиксели, переупакованные в PNG (без потерь)
+    if (/\.png$/i.test(path)) return copyPng(readFileSync(path)).then(() => true)
+    const img = nativeImage.createFromPath(path)
+    if (img.isEmpty()) return false
+    await copyPng(img.toPNG())
+    return true
+  })
+  h('clipboard:imageData', (_e, png: Uint8Array) => copyPng(Buffer.from(png)))
   h('update:state', () => updater.getState())
   h('update:check', () => updater.check(true))
   h('update:download', () => updater.download())

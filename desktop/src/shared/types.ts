@@ -391,6 +391,9 @@ export interface Api {
     close(): void
     onState(cb: (s: { maximized: boolean; focused: boolean; dark: boolean }) => void): () => void
   }
+  /** Картинка в буфер обмена без пересжатия; false — формат не читается напрямую (webp и т. п.) */
+  clipboardImage(path: string): Promise<boolean>
+  clipboardImageData(png: Uint8Array): Promise<void>
   update: {
     state(): Promise<UpdateState>
     check(): Promise<UpdateState>

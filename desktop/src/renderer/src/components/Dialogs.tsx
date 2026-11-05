@@ -1,13 +1,13 @@
 import {
   CheckCircle2, Cpu, Download, ExternalLink, Eye, EyeOff, FileText, FolderKanban, KeyRound, MessageSquare,
   Brain, Clock, LogOut, Plug, Send, SquareTerminal,
-  Mic, Moon, Palette as PaletteIcon, Plus, Search, Server as ServerIcon, Settings2, ShieldAlert, ShieldCheck, Sun, Terminal, UserPen, Wallet, X,
+  Mic, Moon, Palette as PaletteIcon, Plus, Search, Server as ServerIcon, Settings2, ShieldAlert, ShieldCheck, Sun, Terminal, UserPen, Wallet, X, Copy,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { money } from '@shared/pricing'
 import type { SearchHit, Settings } from '@shared/types'
-import { answerApproval, newChat, openChat, openProject, saveSettings } from '../lib/actions'
+import { answerApproval, copyImage, isCopyKey, newChat, openChat, openProject, saveSettings } from '../lib/actions'
 import { api } from '../lib/api'
 import { ago, fileUrl } from '../lib/format'
 import { set, useApp } from '../lib/store'
@@ -391,7 +391,13 @@ export function Lightbox() {
   const src = useApp((s) => s.lightbox)
   useEffect(() => {
     if (!src) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && set({ lightbox: null })
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') set({ lightbox: null })
+      else if (isCopyKey(e)) {
+        e.preventDefault()
+        copyImage(src)
+      }
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [src])
@@ -402,6 +408,10 @@ export function Lightbox() {
           <motion.img src={fileUrl(src)} initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
             transition={spring} onClick={(e) => e.stopPropagation()} />
           <div className="tools">
+            <button title="Копировать картинку (Ctrl+C)" onClick={(e) => {
+              e.stopPropagation()
+              copyImage(src)
+            }}><Copy size={18} /></button>
             <button title="Показать в папке" onClick={(e) => {
               e.stopPropagation()
               api.shell.reveal(src)

@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { money } from '@shared/pricing'
 import type { GalleryItem } from '@shared/types'
-import { animate, KEEP_REST, openChat, refreshBalance, toast } from '../lib/actions'
+import { animate, copyImage, isCopyKey, KEEP_REST, openChat, refreshBalance, toast } from '../lib/actions'
 import { api } from '../lib/api'
 import { ago, fileUrl, baseName } from '../lib/format'
 import { get, set, useApp } from '../lib/store'
@@ -107,6 +107,16 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
     setBusy('')
   }
   const pid = cur.projectId
+  // Ctrl+C — копировать открытую картинку (если не выделен текст и не открыт полноэкранный просмотр — у него свой обработчик)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isCopyKey(e) || get().lightbox) return
+      e.preventDefault()
+      copyImage(cur.path)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cur.path])
   return (
     <div className="viewer-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <motion.div className="viewer" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
@@ -120,6 +130,7 @@ export function Viewer({ item, items, onClose }: { item: GalleryItem; items: Gal
             {cur.cost != null && <span className="sub">{money(cur.cost)}</span>}
             <span className="sub">{ago(cur.created)}</span>
             <div style={{ flex: 1 }} />
+            <button className="icon-btn sm" title="Копировать картинку (Ctrl+C)" onClick={() => copyImage(cur.path)}><Copy size={15} /></button>
             <button className={`icon-btn sm ${cur.favorite ? 'active' : ''}`} title="В избранное" onClick={() => run('fav', () => api.gallery.update(cur.id, { favorite: !cur.favorite }).then(() => setCur({ ...cur, favorite: !cur.favorite })))}>
               <Heart size={15} fill={cur.favorite ? 'currentColor' : 'none'} />
             </button>

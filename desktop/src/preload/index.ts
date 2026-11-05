@@ -107,6 +107,8 @@ const api: Api = {
       return () => ipcRenderer.removeListener('win:state', fn)
     },
   },
+  clipboardImage: call('clipboard:image') as Api['clipboardImage'],
+  clipboardImageData: call('clipboard:imageData') as Api['clipboardImageData'],
   update: {
     state: call('update:state'), check: call('update:check'), download: call('update:download'), install: call('update:install'),
     onState: (cb) => {

@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
-import { app, shell } from 'electron'
+import { app, powerMonitor, shell } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateState } from '@shared/types'
 import { isWin, shellArgv } from './platform'
@@ -41,7 +41,10 @@ export function newer(a: string, b: string): boolean {
   return false
 }
 
+let lastCheck = 0
+
 export async function check(manual = false): Promise<UpdateState> {
+  lastCheck = Date.now()
   if (['downloading', 'ready'].includes(state.status)) return state
   if (manual) emit({ status: 'checking', error: undefined })
   try {
@@ -127,5 +130,9 @@ export function start(onChange: (s: UpdateState) => void) {
     autoUpdater.on('error', (e) => state.status === 'downloading' && emit({ status: 'error', error: e.message.split('\n')[0] }))
   }
   setTimeout(() => check(), 8_000)
+  // после сна или блокировки экрана: таймер на 6 часов во сне стоит, поэтому проверяем сразу (сеть поднимается не мгновенно)
+  const soon = () => setTimeout(() => Date.now() - lastCheck > 30 * 60_000 && check(), 20_000)
+  powerMonitor.on('resume', soon)
+  powerMonitor.on('unlock-screen', soon)
   setInterval(() => check(), CHECK_EVERY)
 }

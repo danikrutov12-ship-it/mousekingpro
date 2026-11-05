@@ -1,7 +1,7 @@
 {
   "name": "mouse-king-pro",
   "productName": "Mouse King Pro",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "Mouse King Pro — ИИ-агент на моделях Venice: чат, код, файлы, картинки и видео",
   "main": "out/main/index.js",
   "private": true,

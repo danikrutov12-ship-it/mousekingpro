@@ -77,20 +77,20 @@ export interface ProParams {
   upscale?: boolean
 }
 
-/** Что скачать на сетевой диск: [папка ComfyUI, имя файла, ссылка]. */
+/** Что скачать на сетевой диск: [папка в models/, имя файла, ссылка]. Папки — как в worker-comfyui (unet, clip), а не diffusion_models/text_encoders. */
 export const MODEL_FILES: [string, string, string][] = [
-  ['diffusion_models', 'qwen_image_edit_2511_fp8mixed.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors'],
+  ['unet', 'qwen_image_edit_2511_fp8mixed.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors'],
   ['loras', 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors', 'https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors'],
-  ['text_encoders', 'qwen_2.5_vl_7b_fp8_scaled.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors'],
+  ['clip', 'qwen_2.5_vl_7b_fp8_scaled.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors'],
   ['vae', 'qwen_image_vae.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors'],
-  ['diffusion_models', 'qwen_image_2512_fp8_e4m3fn.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors'],
-  ['diffusion_models', 'flux1-dev-kontext_fp8_scaled.safetensors', 'https://huggingface.co/Comfy-Org/flux1-kontext-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors'],
-  ['text_encoders', 'clip_l.safetensors', 'https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors'],
-  ['text_encoders', 't5xxl_fp8_e4m3fn_scaled.safetensors', 'https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn_scaled.safetensors'],
+  ['unet', 'qwen_image_2512_fp8_e4m3fn.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors'],
+  ['unet', 'flux1-dev-kontext_fp8_scaled.safetensors', 'https://huggingface.co/Comfy-Org/flux1-kontext-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors'],
+  ['clip', 'clip_l.safetensors', 'https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors'],
+  ['clip', 't5xxl_fp8_e4m3fn_scaled.safetensors', 'https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn_scaled.safetensors'],
   ['vae', 'ae.safetensors', 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors'],
-  ['diffusion_models', 'Chroma1-HD-fp8mixed.safetensors', 'https://huggingface.co/Comfy-Org/Chroma1-HD_repackaged/resolve/main/split_files/diffusion_models/Chroma1-HD-fp8mixed.safetensors'],
-  ['diffusion_models', 'z_image_turbo_bf16.safetensors', 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors'],
-  ['text_encoders', 'qwen_3_4b_fp8_mixed.safetensors', 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors'],
+  ['unet', 'Chroma1-HD-fp8mixed.safetensors', 'https://huggingface.co/Comfy-Org/Chroma1-HD_repackaged/resolve/main/split_files/diffusion_models/Chroma1-HD-fp8mixed.safetensors'],
+  ['unet', 'z_image_turbo_bf16.safetensors', 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors'],
+  ['clip', 'qwen_3_4b_fp8_mixed.safetensors', 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors'],
   ['checkpoints', 'RealVisXL_V5.0_fp16.safetensors', 'https://huggingface.co/SG161222/RealVisXL_V5.0/resolve/main/RealVisXL_V5.0_fp16.safetensors'],
   ['checkpoints', 'Juggernaut-XI-byRunDiffusion.safetensors', 'https://huggingface.co/RunDiffusion/Juggernaut-XI-v11/resolve/main/Juggernaut-XI-byRunDiffusion.safetensors'],
   ['upscale_models', '4x-UltraSharp.safetensors', 'https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.safetensors'],

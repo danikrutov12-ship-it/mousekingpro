@@ -40,7 +40,7 @@ function withLoras(b: ReturnType<typeof builder>, model: Link, p: ProParams, cli
 /** Фото как основа (img2img) — масштаб ~1 МП, иначе пустой латент нужного размера. */
 function startLatent(b: ReturnType<typeof builder>, p: ProParams, images: string[], vae: Link, sd3 = true): { latent: Link; denoise: number } {
   if (images[0]) {
-    const img = b.add('ImageScaleToTotalPixels', { image: b.add('LoadImage', { image: images[0] }), upscale_method: 'lanczos', megapixels: 1 })
+    const img = b.add('ImageScaleToTotalPixels', { image: b.add('LoadImage', { image: images[0] }), upscale_method: 'lanczos', megapixels: 1, resolution_steps: 8 })
     return { latent: b.add('VAEEncode', { pixels: img, vae }), denoise: Math.min(0.95, Math.max(0.15, p.strength ?? 0.5)) }
   }
   const [width, height] = ASPECTS[p.aspect || '1:1'] || ASPECTS['1:1']

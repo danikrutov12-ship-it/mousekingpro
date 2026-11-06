@@ -50,6 +50,18 @@ function prepImage(path: string): string {
   return out.toJPEG(94).toString('base64')
 }
 
+/** Понятный текст для частых ошибок ComfyUI: нет файла LoRA или модели на диске RunPod. */
+function friendlyError(err: string): string | null {
+  const m = /(lora_name|unet_name|ckpt_name|clip_name|vae_name|model_name): '([^']+)' not in \[([^\]]*)\]/.exec(err)
+  if (!m) return null
+  const have = m[3].replace(/'/g, '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (m[1] === 'lora_name') {
+    const list = have.filter((n) => !/Lightning/i.test(n))
+    return `LoRA «${m[2]}» нет на диске RunPod (папка models/loras).` + (list.length ? ` Есть: ${list.join(', ')}` : ' Там пока нет ни одной своей LoRA.')
+  }
+  return `На диске RunPod нет файла модели «${m[2]}» — модели нужно докачать.`
+}
+
 export interface ProResult { paths: string[]; seconds: number; cold: boolean }
 
 /** Запуск: отправить воркфлоу, ждать результат, сохранить картинки. */
@@ -90,7 +102,7 @@ export async function generate(
       return { paths, seconds: Math.round((s.executionTime || 0) / 1000), cold }
     } else if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(s.status)) {
       const err = typeof s.error === 'string' ? s.error : JSON.stringify(s.error || s.output || {})
-      throw new Error(`RunPod: ${s.status} — ${err.slice(0, 500)}`)
+      throw new Error(friendlyError(err) || `RunPod: ${s.status} — ${err.slice(0, 500)}`)
     }
   }
 }

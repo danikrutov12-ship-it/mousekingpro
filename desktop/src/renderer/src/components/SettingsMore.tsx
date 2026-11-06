@@ -376,11 +376,28 @@ export function RunpodTab({ settings }: { settings: Settings }) {
   const [st, setSt] = useState<Awaited<ReturnType<typeof api.runpod.status>> | null>(null)
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
+  const [checking, setChecking] = useState(false)
   const load = () => api.runpod.status().then(setSt).catch(() => setSt(null))
   useEffect(() => {
     load()
   }, [settings.runpod_endpoint])
+  const check = async () => {
+    setChecking(true)
+    try {
+      const r = await api.runpod.status()
+      setSt(r)
+      if (!r.key) toast('Сначала сохраните ключ RunPod', 'error')
+      else if (!r.endpoint) toast('Укажите ID эндпоинта', 'error')
+      else if (r.error) toast(`Эндпоинт не отвечает: ${r.error}`, 'error')
+      else toast(`RunPod подключён${r.balance != null ? ` · баланс $${r.balance.toFixed(2)}` : ''}`, 'ok')
+    } catch (e) {
+      setSt(null)
+      toast(errText(e), 'error')
+    }
+    setChecking(false)
+  }
   const w = st?.health?.workers
+  const sleeping = !!w && !(w.running || w.idle || w.initializing)
   return (
     <>
       <h3>RunPod</h3>
@@ -423,11 +440,14 @@ export function RunpodTab({ settings }: { settings: Settings }) {
           onBlur={(e) => e.target.value.trim() !== settings.runpod_endpoint && saveSettings({ runpod_endpoint: e.target.value.trim() })} />
         <div className="hint">
           {st?.error ? `Ошибка: ${st.error}`
-            : w ? `Видеокарты: работают ${w.running ?? 0}, готовы ${w.idle ?? 0}, запускаются ${w.initializing ?? 0} · в очереди ${st?.health?.jobs?.inQueue ?? 0}`
+            : sleeping ? '✓ Эндпоинт отвечает. Видеокарты сейчас выключены — это нормально: включатся сами при первом запросе (первый запуск — до 1–2 минут).'
+            : w ? `✓ Эндпоинт отвечает. Видеокарты: работают ${w.running ?? 0}, готовы ${w.idle ?? 0}, запускаются ${w.initializing ?? 0} · в очереди ${st?.health?.jobs?.inQueue ?? 0}`
               : 'Serverless → ваш эндпоинт → ID в адресе страницы.'}
         </div>
       </div>
-      <button className="btn" onClick={load}><Play size={14} />Проверить подключение</button>
+      <button className="btn" disabled={checking} onClick={check}>
+        {checking ? <Loader2 size={14} className="spin" /> : <Play size={14} />}{checking ? 'Проверяю…' : 'Проверить подключение'}
+      </button>
     </>
   )
 }

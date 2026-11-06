@@ -1,4 +1,4 @@
-import { ArrowUp, Archive, Brain, BrainOff, Check, ChevronDown, Search, SlidersHorizontal, File, FileText, Folder, Image, Loader2, MessageSquare, Mic, Paperclip, Square, Video, X } from 'lucide-react'
+import { ArrowUp, Archive, Crown, Brain, BrainOff, Check, ChevronDown, Search, SlidersHorizontal, File, FileText, Folder, Image, Loader2, MessageSquare, Mic, Paperclip, Square, Video, X } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { imagePrice, money } from '@shared/pricing'
@@ -8,6 +8,7 @@ import { api } from '../lib/api'
 import { fileUrl, humanSize } from '../lib/format'
 import { get, set, useApp } from '../lib/store'
 import { defaults, MediaOptions } from './MediaOptions'
+import { ProOptions } from './ProOptions'
 import { ContextRing } from './Jobs'
 import { ModelPicker } from './ModelPicker'
 import { Popover } from './Popover'
@@ -15,10 +16,10 @@ import { PromptTools } from './PromptTools'
 import { aspectForPhoto } from '@shared/video'
 
 export const MODES: [Mode, string, typeof MessageSquare][] = [
-  ['text', 'Чат', MessageSquare], ['image', 'Картинка', Image], ['video', 'Видео', Video],
+  ['text', 'Чат', MessageSquare], ['image', 'Картинка', Image], ['video', 'Видео', Video], ['pro', 'Картинка Pro', Crown],
 ]
 const PLACEHOLDER: Record<Mode, string> = {
-  text: 'Чем могу помочь?', image: 'Опишите картинку…', video: 'Опишите видео…',
+  text: 'Чем могу помочь?', image: 'Опишите картинку…', video: 'Опишите видео…', pro: 'Что сделать с фото (или опишите картинку)…',
 }
 
 function AttachIcon({ a }: { a: Attachment }) {
@@ -273,7 +274,13 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
         )}
       </AnimatePresence>
       <AnimatePresence initial={false}>
-        {mode !== 'text' && (
+        {mode === 'pro' && (
+          <motion.div key="pro" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
+            <ProOptions model={model} photos={photoCount} />
+          </motion.div>
+        )}
+        {mode !== 'text' && mode !== 'pro' && (
           <motion.div key={mode} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
             {!(mode === 'image' && (attachments.some((a) => a.kind === 'image') || refSetOn)) && (

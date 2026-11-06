@@ -1,7 +1,7 @@
 import {
   CheckCircle2, Cpu, Download, ExternalLink, Eye, EyeOff, FileText, FolderKanban, KeyRound, MessageSquare,
   Brain, Clock, LogOut, Plug, Send, SquareTerminal,
-  Mic, Moon, Palette as PaletteIcon, Plus, Search, Server as ServerIcon, Settings2, ShieldAlert, ShieldCheck, Sun, Terminal, UserPen, Wallet, X, Copy,
+  Mic, Moon, Palette as PaletteIcon, Plus, Search, Server as ServerIcon, Settings2, ShieldAlert, ShieldCheck, Sun, Terminal, UserPen, Wallet, X, Copy, Crown,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -13,7 +13,7 @@ import { ago, fileUrl } from '../lib/format'
 import { set, useApp } from '../lib/store'
 import { Modal, spring } from './Modal'
 import { InstallButton, UpdateRow, LimitsTab, SafeCommands, ServersTab, VoiceTab } from './SettingsExtra'
-import { AgentExtras, BackgroundSwitch, McpTab, MemoryTab, SchedulesTab, TelegramTab } from './SettingsMore'
+import { AgentExtras, BackgroundSwitch, McpTab, MemoryTab, RunpodTab, SchedulesTab, TelegramTab } from './SettingsMore'
 
 // ================================================================ настройки
 
@@ -78,7 +78,7 @@ export function SettingsDialog() {
     ['agent', 'Агент', <Cpu size={16} />], ['safety', 'Безопасность', <ShieldCheck size={16} />],
     ['servers', 'Серверы и секреты', <ServerIcon size={16} />], ['limits', 'Расходы', <Wallet size={16} />],
     ['voice', 'Голос', <Mic size={16} />], ['memory', 'Память', <Brain size={16} />],
-    ['mcp', 'Подключения (MCP)', <Plug size={16} />], ['telegram', 'Telegram', <Send size={16} />],
+    ['mcp', 'Подключения (MCP)', <Plug size={16} />], ['telegram', 'Telegram', <Send size={16} />], ['runpod', 'RunPod', <Crown size={16} />],
     ['schedules', 'Расписание', <Clock size={16} />],
   ]
   return (
@@ -140,6 +140,7 @@ export function SettingsDialog() {
               {tab === 'memory' && <MemoryTab settings={settings} />}
               {tab === 'mcp' && <McpTab settings={settings} />}
               {tab === 'telegram' && <TelegramTab settings={settings} />}
+              {tab === 'runpod' && <RunpodTab settings={settings} />}
               {tab === 'schedules' && <SchedulesTab settings={settings} />}
               {tab === 'look' && <>
                 <h3>Оформление</h3>

@@ -38,6 +38,7 @@ const FILTERS: Record<Mode, [string, string, (m: Model) => boolean][]> = {
   image: [['all', 'Все', () => true], ['unc', 'Без цензуры', (m) => m.uncensored]],
   video: [['all', 'Все', () => true], ['t2v', 'Из текста', (m) => m.constraints?.model_type === 'text-to-video'],
     ['i2v', 'Из картинки', (m) => m.constraints?.model_type === 'image-to-video'], ['v2v', 'Из видео', (m) => m.constraints?.model_type === 'video']],
+  pro: [['all', 'Все', () => true], ['edit', 'Правка по фото', (m) => m.constraints?.kind === 'edit'], ['gen', 'Генерация и img2img', (m) => m.constraints?.kind === 'gen']],
 }
 
 export function ModelPicker({ anchor, open, onClose, models, mode, current, onPick }: {

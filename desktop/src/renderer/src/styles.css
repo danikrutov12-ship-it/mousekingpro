@@ -514,6 +514,24 @@ input, textarea, select { font: inherit; color: inherit; }
 .step-btn:hover { background: var(--hover); color: var(--text); }
 .step-btn:disabled { opacity: .35; }
 .opt-hint { font-size: 12px; color: var(--muted); width: 100%; padding: 2px 2px 0; }
+.pro-opts { display: flex; flex-direction: column; gap: 8px; margin: 10px 14px 0; padding: 10px; border-radius: 12px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
+.pro-opts .options { padding: 0; margin: 0; }
+.pro-note { font-size: 12px; color: var(--text-2); }
+.pro-neg { display: flex; align-items: center; gap: 7px; padding: 0 6px 0 9px; height: 32px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+.pro-neg:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.pro-neg input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 12.5px var(--sans); color: var(--text); }
+.pro-neg.off { opacity: .55; }
+.pro-neg-note { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--muted); margin-top: -3px; }
+.pro-neg-note.ok { color: var(--ok); }
+.chip-toggle { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); font-size: 12.5px; cursor: pointer; user-select: none; }
+.chip-toggle input { display: none; }
+.chip-toggle.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.pro-strength { flex: 1; min-width: 220px; }
+.pro-loras { display: flex; flex-direction: column; gap: 6px; }
+.pro-lora { display: flex; align-items: center; gap: 8px; }
+.pro-lora .input { flex: 1; height: 30px; font-size: 12px; }
+.pro-lora .range { width: 120px; }
+.pro-lora em { font-style: normal; font-size: 12px; color: var(--muted); width: 34px; }
 .opt-warn { font-size: 12px; width: 100%; padding: 6px 9px; border-radius: 8px; color: var(--text-2); background: color-mix(in srgb, #e0a030 14%, transparent); border: 1px solid color-mix(in srgb, #e0a030 35%, transparent); }
 .neg-input { flex: 1; min-width: 220px; height: 30px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--border); padding: 0 10px; font-size: 12.5px; outline: none; }
 .neg-input:focus { border-color: var(--accent); }

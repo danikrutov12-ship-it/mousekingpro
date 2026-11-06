@@ -1,6 +1,6 @@
 // Общие типы основного процесса и интерфейса. Формат чатов и проектов совместим с версией на Python.
 
-export type Mode = 'text' | 'image' | 'video'
+export type Mode = 'text' | 'image' | 'video' | 'pro'
 export type Theme = 'light' | 'dark' | 'system'
 
 export interface Settings {
@@ -9,6 +9,10 @@ export interface Settings {
   text_model: string
   image_model: string
   video_model: string
+  pro_model: string
+  runpod_endpoint: string
+  /** последние настройки «Картинки Pro» */
+  pro_opts?: { fast?: boolean; strength?: number; upscale?: boolean; aspect?: string; loras?: { name: string; weight: number }[] }
   temperature: number
   max_steps: number
   tool_mode: 'auto' | 'native' | 'text'
@@ -122,7 +126,7 @@ export interface Model {
   pricing: Record<string, any>
 }
 
-export interface ModelsResult { text: Model[]; image: Model[]; video: Model[]; errors: string }
+export interface ModelsResult { text: Model[]; image: Model[]; video: Model[]; pro: Model[]; errors: string }
 
 export interface Project {
   id: string
@@ -242,6 +246,7 @@ export interface SendRequest {
   op?: MediaOp // действие с картинкой: увеличить, убрать фон, изменить
   memory?: boolean // использовать память в этом чате (для нового чата)
   refPaths?: string[] // фото набора референсов для reference-to-video
+  pro?: import('./runpod').ProParams // «Картинка Pro» на RunPod
 }
 
 // События запуска агента/генерации, которые основной процесс шлёт в интерфейс
@@ -348,6 +353,11 @@ export interface Api {
     init(projectId: string): Promise<boolean>
     merge(projectId: string, chatId: string): Promise<string>
     push(projectId: string, chatId: string): Promise<{ ok: boolean; text: string; url?: string }>
+  }
+  runpod: {
+    status(): Promise<{ key: boolean; endpoint: string; balance: number | null; health: any; error?: string }>
+    setKey(key: string): Promise<void>
+    removeKey(): Promise<void>
   }
   telegram: { status(): Promise<{ running: boolean; error: string; bot?: string; code: string }>; setToken(token: string): Promise<string>; unlink(): Promise<void> }
   schedules: { run(id: string): Promise<void> }

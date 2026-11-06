@@ -36,6 +36,7 @@ export interface State {
   refSet: string | null // выбранный набор референсов
   keepRest: boolean     // при правке по фото: не менять остальное
   avoid: string         // при правке по фото: чего не должно быть (аналог негативного промпта)
+  proNegative: string   // «Картинка Pro»: негативный промпт
   approvals: ApprovalReq[]
   mode: Mode
   draft: string
@@ -54,7 +55,7 @@ export interface State {
 let state: State = {
   ready: false,
   settings: null,
-  models: { text: [], image: [], video: [], errors: '' },
+  models: { text: [], image: [], video: [], pro: [], errors: '' },
   modelsLoading: false,
   balance: null,
   defaultProject: null,
@@ -72,6 +73,7 @@ let state: State = {
   refSet: null,
   keepRest: true,
   avoid: '',
+  proNegative: '',
   approvals: [],
   mode: 'text',
   draft: '',

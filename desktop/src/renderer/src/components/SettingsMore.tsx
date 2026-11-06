@@ -370,3 +370,64 @@ export function BackgroundSwitch({ settings }: { settings: Settings }) {
     </>
   )
 }
+
+/** RunPod: ключ (шифруется), ID эндпоинта, баланс и состояние видеокарт для «Картинки Pro». */
+export function RunpodTab({ settings }: { settings: Settings }) {
+  const [st, setSt] = useState<Awaited<ReturnType<typeof api.runpod.status>> | null>(null)
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = () => api.runpod.status().then(setSt).catch(() => setSt(null))
+  useEffect(() => {
+    load()
+  }, [settings.runpod_endpoint])
+  const w = st?.health?.workers
+  return (
+    <>
+      <h3>RunPod</h3>
+      <div className="hint" style={{ marginBottom: 14, fontSize: 13, color: 'var(--text-2)' }}>
+        Свой сервер с моделями для «Картинки Pro». Видеокарта включается только на время генерации и сама выключается —
+        деньги списываются посекундно, без запросов — только хранение моделей на диске.
+      </div>
+      {!st?.key ? (
+        <div className="field">
+          <label>Ключ API RunPod</label>
+          <div className="row-end">
+            <input className="input mono" type="password" placeholder="rpa_…" value={key} onChange={(e) => setKey(e.target.value)} />
+            <button className="btn primary" disabled={!key.trim() || busy} onClick={async () => {
+              setBusy(true)
+              try {
+                await api.runpod.setKey(key)
+                setKey('')
+                toast('Ключ RunPod сохранён', 'ok')
+                load()
+              } catch (e) {
+                toast(errText(e), 'error')
+              }
+              setBusy(false)
+            }}>{busy ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}Сохранить</button>
+          </div>
+          <div className="hint">RunPod → Settings → API Keys. Хранится только на этом компьютере, зашифрованным.</div>
+        </div>
+      ) : (
+        <div className="toggle-row">
+          <div className="t"><b>Ключ сохранён</b><span>{st.balance != null ? `Баланс RunPod: $${st.balance.toFixed(2)}` : 'Баланс не получен'}</span></div>
+          <button className="btn ghost danger" onClick={async () => {
+            await api.runpod.removeKey()
+            load()
+          }}><Trash2 size={14} />Удалить ключ</button>
+        </div>
+      )}
+      <div className="field">
+        <label>ID эндпоинта (Serverless)</label>
+        <input className="input mono" placeholder="например, abc123xyz" defaultValue={settings.runpod_endpoint}
+          onBlur={(e) => e.target.value.trim() !== settings.runpod_endpoint && saveSettings({ runpod_endpoint: e.target.value.trim() })} />
+        <div className="hint">
+          {st?.error ? `Ошибка: ${st.error}`
+            : w ? `Видеокарты: работают ${w.running ?? 0}, готовы ${w.idle ?? 0}, запускаются ${w.initializing ?? 0} · в очереди ${st?.health?.jobs?.inQueue ?? 0}`
+              : 'Serverless → ваш эндпоинт → ID в адресе страницы.'}
+        </div>
+      </div>
+      <button className="btn" onClick={load}><Play size={14} />Проверить подключение</button>
+    </>
+  )
+}

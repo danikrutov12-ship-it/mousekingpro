@@ -4,6 +4,7 @@ import { api } from './api'
 import { get, set, type Artifact, type PanelTab } from './store'
 import { baseName, fileUrl } from './format'
 import { aspectForPhoto, isReferenceModel, photoProblem, photoSibling } from '@shared/video'
+import { proModel } from '@shared/runpod'
 
 let toastId = 0
 export function toast(text: string, kind?: 'error' | 'ok') {
@@ -156,6 +157,33 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
       if (refs.length > max) toast(`Модель принимает до ${max} фото — лишние не отправлены`, 'error')
       return send(text, attachments, undefined, { ...extra, op, mode: 'image', model: modelFor('image') })
     }
+  }
+  if (mode === 'pro') {
+    const s = get().settings!
+    if (!s.runpod_endpoint) {
+      toast('Подключите RunPod: Настройки → RunPod', 'error')
+      set({ settingsOpen: true })
+      return false
+    }
+    const m = proModel(model.id)
+    const photos = attachments.filter((a) => a.kind === 'image').length
+    if (m.kind === 'edit' && !photos) {
+      toast(`${m.name} правит фото — прикрепите хотя бы одно`, 'error')
+      return false
+    }
+    if (!text) {
+      toast(photos ? 'Напишите, что сделать с фото' : 'Опишите картинку', 'error')
+      return false
+    }
+    const o = s.pro_opts || {}
+    const fast = !!(m.fast && o.fast)
+    const negative = get().proNegative.trim()
+    if (negative && !m.negative(fast)) toast(`${m.name}${fast ? ' в быстром режиме' : ''} не учитывает негатив — отправляю без него`, 'ok')
+    extra = { ...extra, pro: {
+      model: m.id, prompt: text, fast, negative: m.negative(fast) ? negative : undefined, strength: o.strength, aspect: o.aspect as any,
+      upscale: o.upscale, loras: (o.loras || []).filter((l) => l.name && m.lora),
+    } }
+    params = undefined
   }
   if (mode === 'image' && !text && !extra.op) {
     toast('Опишите изображение', 'error')

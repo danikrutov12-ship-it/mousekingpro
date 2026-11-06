@@ -30,6 +30,8 @@ import { ICON, installDesktopEntry } from './install'
 import { isWin, which } from './platform'
 import * as updater from './updater'
 import { isReferenceModel, MAX_REFERENCE_IMAGES } from '@shared/video'
+import { PRO_MODELS, proModel } from '@shared/runpod'
+import * as runpod from './runpod'
 import { setServerSecrets, sshAuth } from './tools'
 import { explain, Venice } from './venice'
 
@@ -259,7 +261,7 @@ async function send(req: SendRequest) {
   }
 
   // сообщение пользователя
-  const label = { text: 'Текст', image: 'Изображение', video: 'Видео' }[req.mode as Mode]
+  const label = { text: 'Текст', image: 'Изображение', video: 'Видео', pro: 'Картинка Pro' }[req.mode as Mode]
   let user: Message
   if (req.mode === 'text') {
     const n = attachments.notes(req.attachments)
@@ -392,6 +394,7 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
     return
   }
   if (req.op) return runOp(req.op, settings, chat, root, push, status)
+  if (req.mode === 'pro') return runPro(req, settings, project, chat, push, status)
   // картинка или видео
   const params: Record<string, any> = { model: req.model.id, ...(req.params || {}) }
   if (req.text) params.prompt = req.text
@@ -437,6 +440,39 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
   }
 }
 
+/** «Картинка Pro»: свой RunPod Serverless с ComfyUI. */
+async function runPro(req: SendRequest, settings: Settings, project: Project, chat: Chat, push: (m: Message) => void, status: (s: string) => void) {
+  const key = secrets.get('app:runpod')
+  const endpoint = settings.runpod_endpoint
+  let stopped = false
+  active.set(chat.id, { projectId: project.id, stop: () => (stopped = true) })
+  try {
+    if (!key || !endpoint) throw new Error('RunPod не настроен: добавьте ключ и ID эндпоинта в Настройки → RunPod')
+    const p = { ...req.pro!, model: req.model.id, prompt: req.text }
+    const photos = req.attachments.filter((a) => a.kind === 'image').map((a) => a.path)
+    const root = store.expand(project.folder)
+    const r = await runpod.generate({ key, endpoint }, p, photos, join(root, 'generated'), status, () => stopped)
+    const m = proModel(p.model)
+    const parent = photos[0] ? gallery.ensure(photos[0], project.id).id : undefined
+    for (const path of r.paths) {
+      gallery.add({ path, source: photos.length ? (m.kind === 'edit' ? 'edit' : 'local') : 'generate', prompt: req.text, model: `${m.name} (RunPod)`,
+        params: { ...p, prompt: undefined }, seed: p.seed, parent, projectId: project.id, chatId: chat.id })
+    }
+    push({ role: 'assistant', _media: r.paths,
+      content: `Готово на RunPod (${m.name}) за ${r.seconds} с${r.cold ? ', включая запуск видеокарты' : ''} — сохранено в ` + r.paths.map((x) => relative(root, x)).join(', ') })
+  } catch (e) {
+    push({ role: 'assistant', content: (e as Error).message, _error: true })
+  } finally {
+    active.delete(chat.id)
+    emit({ type: 'done', chatId: chat.id })
+  }
+}
+
+const proModels = (): Model[] => PRO_MODELS.map((m) => ({
+  id: m.id, type: 'pro', name: m.name, description: m.note, uncensored: true, tools: false, vision: false, reasoning: false, web_search: false,
+  context: null, constraints: { family: m.family, kind: m.kind, maxRefs: m.maxRefs, fast: !!m.fast, lora: m.lora }, pricing: {},
+}))
+
 /** Действия с готовой картинкой: увеличить, убрать фон, изменить по описанию. */
 async function runOp(op: MediaOp, settings: Settings, chat: Chat, root: string, push: (m: Message) => void, status: (s: string) => void) {
   const api = venice()
@@ -475,7 +511,7 @@ function handlers() {
     return s
   })
   h('models', async () => {
-    const out: any = { text: [], image: [], video: [], errors: '' }
+    const out: any = { text: [], image: [], video: [], pro: proModels(), errors: ''  }
     const errors: string[] = []
     if (!loadSettings().api_key) return { ...out, errors: 'Нет API-ключа' }
     const api = venice()
@@ -774,6 +810,22 @@ function handlers() {
     startTelegram()
     return name
   })
+  h('runpod:status', async () => {
+    const key = secrets.get('app:runpod')
+    const endpoint = loadSettings().runpod_endpoint
+    if (!key) return { key: false, endpoint, balance: null, health: null }
+    const [bal, hl] = await Promise.all([
+      runpod.balance(key).catch(() => null),
+      endpoint ? runpod.health({ key, endpoint }).then((h) => ({ ok: h })).catch((e) => ({ err: (e as Error).message })) : Promise.resolve({ ok: null }),
+    ])
+    return { key: true, endpoint, balance: bal, health: 'ok' in hl ? hl.ok : null, error: 'err' in hl ? hl.err : undefined }
+  })
+  h('runpod:setKey', async (_e, key: string) => {
+    if ((await runpod.balance(key.trim())) === null) throw new Error('Ключ RunPod не подошёл')
+    secrets.set('app:runpod', key.trim())
+  })
+  h('runpod:removeKey', () => secrets.remove('app:runpod'))
+
   h('telegram:unlink', () => {
     telegram.stop()
     secrets.remove('app:telegram')

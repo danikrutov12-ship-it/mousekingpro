@@ -17,6 +17,8 @@ export const DEFAULTS: Settings = {
   text_model: 'deepseek-v4-1-flash-1017-uncensored',
   image_model: '',
   video_model: '',
+  pro_model: 'qwen-edit-2511',
+  runpod_endpoint: '',
   temperature: 0.7,
   max_steps: 40,
   tool_mode: 'auto',

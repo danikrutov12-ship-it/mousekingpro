@@ -287,6 +287,8 @@ async function send(req: SendRequest) {
   }
   Object.assign(user, fork)
   if (req.attachments.length) user._attachments = req.attachments.map((a) => a.name)
+  const photos = req.attachments.filter((a) => a.kind === 'image' || a.kind === 'video').map((a) => a.path)
+  if (photos.length) user._photos = photos
   if (!chat.messages.length) {
     chat.title = titleFrom(req.text || req.attachments.map((a) => a.name).join(', '))
     if (req.memory === false) chat.memory = false
@@ -441,6 +443,20 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
   }
 }
 
+/** Старые чаты хранили только имена вложений: находим фото в uploads проекта, чтобы показать их картинками. */
+const MEDIA_RE = /\.(png|jpe?g|webp|gif|bmp|mp4|webm|mov|mkv)$/i
+function withPhotos(pid: string, chat: Chat | null): Chat | null {
+  const project = chat && store.project(pid)
+  if (!chat || !project) return chat
+  const root = store.expand(project.folder)
+  for (const m of chat.messages) {
+    if (m.role !== 'user' || m._photos || !m._attachments?.length) continue
+    const found = m._attachments.filter((n) => MEDIA_RE.test(n)).map((n) => join(root, 'uploads', n)).filter((p) => existsSync(p))
+    if (found.length) m._photos = found
+  }
+  return chat
+}
+
 /** «Картинка Pro»: свой RunPod Serverless с ComfyUI. */
 async function runPro(req: SendRequest, settings: Settings, project: Project, chat: Chat, push: (m: Message) => void, status: (s: string) => void) {
   const key = secrets.get('app:runpod')
@@ -569,7 +585,7 @@ function handlers() {
 
   h('chats:recent', () => store.allChats())
   h('chats:list', (_e, pid: string) => store.chats(pid))
-  h('chats:load', (_e, pid: string, cid: string) => store.loadChat(pid, cid))
+  h('chats:load', (_e, pid: string, cid: string) => withPhotos(pid, store.loadChat(pid, cid)))
   h('chats:create', () => store.newChat())
   h('chats:rename', (_e, pid: string, cid: string, title: string) => {
     const c = store.loadChat(pid, cid)
@@ -1081,7 +1097,7 @@ function tgLog(userText: string, label: string, result: Message, inputs: string[
     saveSettings({ telegram: { ...loadSettings().telegram, imagesChat: chat.id } })
   }
   chat.messages.push({ role: 'user', content: userText || label, _display: userText || label, _mode: label,
-    ...(inputs.length ? { _attachments: inputs.map((p) => basename(p)) } : {}) }, result)
+    ...(inputs.length ? { _attachments: inputs.map((p) => basename(p)), _photos: inputs.filter((p) => existsSync(p)) } : {}) }, result)
   store.saveChat(def.id, chat)
   emit({ type: 'done', chatId: chat.id })
 }

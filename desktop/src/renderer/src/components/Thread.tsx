@@ -347,6 +347,9 @@ const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, tr
 
 function UserTurn({ msg, index, busy }: { msg: Message; index: number; busy: boolean }) {
   const text = msg._display ?? textOf(msg.content)
+  // фото и видео показываем картинками, в подписи остаются только прочие файлы
+  const photos = msg._photos || []
+  const files = (msg._attachments || []).filter((n) => !photos.length || !(IMAGE.test(n) || VIDEO.test(n)))
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(text)
   const alts = msg._alts?.length || 0
@@ -381,15 +384,18 @@ function UserTurn({ msg, index, busy }: { msg: Message; index: number; busy: boo
   return (
     <motion.div className="turn user-msg" {...fade}>
       <div className="user-col">
-        <div className="bubble selectable">
-          {text}
-          {(msg._attachments?.length || msg._mode) && (
-            <div className="chips">
-              {msg._attachments?.map((n) => <span key={n} className="chip"><FileText size={12} />{n}</span>)}
-              {msg._mode && <span className="chip">{msg._mode}</span>}
-            </div>
-          )}
-        </div>
+        {!!photos.length && <Media paths={photos} />}
+        {(text || files.length || msg._mode) && (
+          <div className="bubble selectable">
+            {text}
+            {(files.length || msg._mode) && (
+              <div className="chips">
+                {files.map((n) => <span key={n} className="chip"><FileText size={12} />{n}</span>)}
+                {msg._mode && <span className="chip">{msg._mode}</span>}
+              </div>
+            )}
+          </div>
+        )}
         <div className="user-actions">
           {alts > 1 && (
             <span className="alts">

@@ -112,7 +112,7 @@ function importVideos() {
         if (m.role === 'user' && !m._hidden) user = m
         for (const path of m._media || []) {
           if (!VIDEO_RE.test(path) || !existsSync(path) || byPath(path)) continue
-          const photo = (user?._attachments || []).map((a: any) => (typeof a === 'string' ? a : a?.path)).find((x: string) => x && /\.(png|jpe?g|webp)$/i.test(x) && existsSync(x))
+          const photo = [...(user?._photos || []), ...(user?._attachments || [])].map((a: any) => (typeof a === 'string' ? a : a?.path)).find((x: string) => x && /\.(png|jpe?g|webp)$/i.test(x) && existsSync(x))
           load().items.push({
             id: randomBytes(5).toString('hex'), path, prompt: user?._display || '', model: user?._gen?.model, params: user?._gen?.params,
             source: 'video', projectId: p.id, chatId: chat.id, created: statSync(path).mtimeMs / 1000, cost: m._cost ?? undefined,

@@ -150,6 +150,7 @@ export interface Message {
   _name?: string            // имя инструмента у результата
   _display?: string         // текст пользователя без служебных вставок
   _attachments?: string[]   // имена вложений
+  _photos?: string[]        // полные пути прикреплённых фото и видео — показываются в ленте картинками
   _mode?: string            // подпись режима генерации
   _media?: string[]         // пути к картинкам и видео
   _error?: boolean

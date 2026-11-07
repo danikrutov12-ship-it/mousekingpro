@@ -740,6 +740,8 @@ pre, code, .diff, .step-block pre, .step-arg { font-variant-ligatures: none !imp
 /* ============================================================ правка, варианты, план, панель */
 .user-col { display: flex; flex-direction: column; align-items: flex-end; max-width: 82%; }
 .user-col .bubble { max-width: 100%; }
+.user-col .media-grid { width: min(440px, 100%); margin: 0 0 6px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.user-col .media-grid.single { width: auto; grid-template-columns: minmax(0, 340px); }
 .user-actions { display: flex; align-items: center; gap: 2px; height: 28px; margin-top: 2px; opacity: 0; transition: opacity .15s; }
 .turn:hover .user-actions, .user-actions:has(.alts) { opacity: 1; }
 .alts { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 4px; }

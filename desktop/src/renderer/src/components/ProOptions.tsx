@@ -1,5 +1,5 @@
 import { Ban, CheckCircle2, Gem, Info, Maximize, Plus, ShieldCheck, Sparkles, X, Zap } from 'lucide-react'
-import { proModel } from '@shared/runpod'
+import { isWavespeed, proModel } from '@shared/runpod'
 import type { Model } from '@shared/types'
 import { saveSettings } from '../lib/actions'
 import { set, useApp } from '../lib/store'
@@ -19,7 +19,8 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
   const negOk = m.negative(fast)
   const loras = opts.loras || []
   // по умолчанию для правки по фото: больше деталей и текстура (см. actions.ts)
-  const hires = opts.hires ?? true
+  const ws = isWavespeed(m)
+  const hires = ws ? !!opts.hires : opts.hires ?? true
   const detail = opts.detail ?? m.kind === 'edit'
   const negNote = negOk ? <><CheckCircle2 size={13} />Негатив работает</>
     : m.fast && fast ? <><Info size={13} />В быстром режиме негатив не учитывается — выключите «Быстро»</>
@@ -27,12 +28,12 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
 
   return (
     <div className="pro-opts">
-      {!configured && (
+      {!configured && !ws && (
         <div className="opt-warn">RunPod ещё не подключён: Настройки → RunPod (ключ и ID эндпоинта).</div>
       )}
       <div className="pro-note">{m.note}</div>
       {m.kind === 'edit' && !photos && <div className="opt-warn">{m.name} правит фото — прикрепите от 1 до {m.maxRefs}.</div>}
-      {photos > m.maxRefs && <div className="opt-warn">{m.name} возьмёт первые {m.maxRefs} фото из {photos}.</div>}
+      {photos > m.maxRefs && <div className="opt-warn">{m.maxRefs ? `${m.name} возьмёт первые ${m.maxRefs} фото из ${photos}.` : `${m.name} рисует только по тексту — фото не учитываются. Для правки выберите Qwen Image 3 Pro Edit.`}</div>}
 
       <div className={`pro-neg ${negOk ? '' : 'off'}`}>
         <Ban size={13} />
@@ -54,7 +55,7 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
             <input type="checkbox" checked={fast} onChange={(e) => upd({ fast: e.target.checked })} /><Zap size={13} />Быстро
           </label>
         )}
-        {m.kind === 'gen' && photos > 0 && (
+        {m.kind === 'gen' && photos > 0 && m.maxRefs > 0 && (
           <label className="ed-slider pro-strength" title="Насколько перерисовать фото: меньше — ближе к оригиналу">
             <span>Изменить фото на</span>
             <input type="range" className="range" min={0.2} max={0.9} step={0.05} value={opts.strength ?? 0.5}
@@ -62,17 +63,22 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
             <em>{Math.round((opts.strength ?? 0.5) * 100)}%</em>
           </label>
         )}
-        {m.kind === 'gen' && !photos && (
+        {m.kind === 'gen' && (!photos || !m.maxRefs) && (
           <select className="input" style={{ width: 'auto', height: 30, padding: '0 8px' }} value={opts.aspect || '1:1'} onChange={(e) => upd({ aspect: e.target.value })}>
             {ASPECTS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         )}
-        {m.kind === 'edit' && (
+        {ws && (
+          <label className={`chip-toggle ${hires ? 'on' : ''}`} title="Результат в 2K вместо 1K: больше деталей, примерно вдвое дороже ($0.075 вместо $0.04)">
+            <input type="checkbox" checked={hires} onChange={(e) => upd({ hires: e.target.checked })} /><Maximize size={13} />2K
+          </label>
+        )}
+        {!ws && m.kind === 'edit' && (
           <label className={`chip-toggle ${hires ? 'on' : ''}`} title="Фото обрабатывается в ~1.6 МП вместо 1 МП: больше деталей, примерно в 1.7 раза дольше">
             <input type="checkbox" checked={hires} onChange={(e) => upd({ hires: e.target.checked })} /><Maximize size={13} />Больше деталей
           </label>
         )}
-        {m.family !== 'zimage' && (
+        {!ws && m.family !== 'zimage' && (
           <label className={`chip-toggle ${detail ? 'on' : ''}`} title="Второй лёгкий проход фотореалистичной моделью (Z-Image): возвращает поры кожи и фактуру ткани, форму и цвета не меняет. +5–10 с">
             <input type="checkbox" checked={detail} onChange={(e) => upd({ detail: e.target.checked })} /><Sparkles size={13} />Текстура
           </label>
@@ -82,9 +88,11 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
             <input type="checkbox" checked={!!opts.maxq} onChange={(e) => upd({ maxq: e.target.checked })} /><Gem size={13} />Макс. качество
           </label>
         )}
-        <label className={`chip-toggle ${opts.upscale ? 'on' : ''}`} title="Увеличить результат в 2 раза (4x-UltraSharp)">
-          <input type="checkbox" checked={!!opts.upscale} onChange={(e) => upd({ upscale: e.target.checked })} />Увеличить ×2
-        </label>
+        {!ws && (
+          <label className={`chip-toggle ${opts.upscale ? 'on' : ''}`} title="Увеличить результат в 2 раза (4x-UltraSharp)">
+            <input type="checkbox" checked={!!opts.upscale} onChange={(e) => upd({ upscale: e.target.checked })} />Увеличить ×2
+          </label>
+        )}
       </div>
 
       {m.lora && (

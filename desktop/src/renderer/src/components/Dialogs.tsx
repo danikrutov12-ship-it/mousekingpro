@@ -78,7 +78,7 @@ export function SettingsDialog() {
     ['agent', 'Агент', <Cpu size={16} />], ['safety', 'Безопасность', <ShieldCheck size={16} />],
     ['servers', 'Серверы и секреты', <ServerIcon size={16} />], ['limits', 'Расходы', <Wallet size={16} />],
     ['voice', 'Голос', <Mic size={16} />], ['memory', 'Память', <Brain size={16} />],
-    ['mcp', 'Подключения (MCP)', <Plug size={16} />], ['telegram', 'Telegram', <Send size={16} />], ['runpod', 'RunPod', <Crown size={16} />],
+    ['mcp', 'Подключения (MCP)', <Plug size={16} />], ['telegram', 'Telegram', <Send size={16} />], ['runpod', 'RunPod / WaveSpeed', <Crown size={16} />],
     ['schedules', 'Расписание', <Clock size={16} />],
   ]
   return (

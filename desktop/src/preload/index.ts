@@ -51,6 +51,7 @@ const api: Api = {
   mcp: { status: call('mcp:status'), test: call('mcp:test') } as Api['mcp'],
   git: { info: call('git:info'), init: call('git:init'), merge: call('git:merge'), push: call('git:push') } as Api['git'],
   runpod: { status: call('runpod:status'), setKey: call('runpod:setKey'), removeKey: call('runpod:removeKey') } as Api['runpod'],
+  wavespeed: { status: call('wavespeed:status'), setKey: call('wavespeed:setKey'), removeKey: call('wavespeed:removeKey') } as Api['wavespeed'],
   telegram: { status: call('telegram:status'), setToken: call('telegram:setToken'), unlink: call('telegram:unlink') } as Api['telegram'],
   schedules: { run: call('schedules:run') } as Api['schedules'],
   term: {

@@ -359,6 +359,11 @@ export interface Api {
     setKey(key: string): Promise<void>
     removeKey(): Promise<void>
   }
+  wavespeed: {
+    status(): Promise<{ key: boolean; balance: number | null }>
+    setKey(key: string): Promise<void>
+    removeKey(): Promise<void>
+  }
   telegram: { status(): Promise<{ running: boolean; error: string; bot?: string; code: string }>; setToken(token: string): Promise<string>; unlink(): Promise<void> }
   schedules: { run(id: string): Promise<void> }
   term: {

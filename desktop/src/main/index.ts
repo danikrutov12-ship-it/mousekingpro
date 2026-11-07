@@ -30,8 +30,9 @@ import { ICON, installDesktopEntry } from './install'
 import { isWin, which } from './platform'
 import * as updater from './updater'
 import { isReferenceModel, MAX_REFERENCE_IMAGES } from '@shared/video'
-import { PRO_MODELS, proModel } from '@shared/runpod'
+import { isWavespeed, PRO_MODELS, proModel } from '@shared/runpod'
 import * as runpod from './runpod'
+import * as wavespeed from './wavespeed'
 import { setServerSecrets, sshAuth } from './tools'
 import { explain, Venice } from './venice'
 
@@ -447,19 +448,26 @@ async function runPro(req: SendRequest, settings: Settings, project: Project, ch
   let stopped = false
   active.set(chat.id, { projectId: project.id, stop: () => (stopped = true) })
   try {
-    if (!key || !endpoint) throw new Error('RunPod не настроен: добавьте ключ и ID эндпоинта в Настройки → RunPod')
     const p = { ...req.pro!, model: req.model.id, prompt: req.text }
+    const m = proModel(p.model)
     const photos = req.attachments.filter((a) => a.kind === 'image').map((a) => a.path)
     const root = store.expand(project.folder)
-    const r = await runpod.generate({ key, endpoint }, p, photos, join(root, 'generated'), status, () => stopped)
-    const m = proModel(p.model)
+    let r: runpod.ProResult
+    if (isWavespeed(m)) {
+      const wsKey = secrets.get('app:wavespeed')
+      if (!wsKey) throw new Error('WaveSpeed не настроен: добавьте ключ в Настройки → RunPod / WaveSpeed')
+      r = await wavespeed.generate(wsKey, p, photos, join(root, 'generated'), status, () => stopped)
+    } else {
+      if (!key || !endpoint) throw new Error('RunPod не настроен: добавьте ключ и ID эндпоинта в Настройки → RunPod / WaveSpeed')
+      r = await runpod.generate({ key, endpoint }, p, photos, join(root, 'generated'), status, () => stopped)
+    }
     const parent = photos[0] ? gallery.ensure(photos[0], project.id).id : undefined
     for (const path of r.paths) {
-      gallery.add({ path, source: photos.length ? (m.kind === 'edit' ? 'edit' : 'local') : 'generate', prompt: req.text, model: `${m.name} (RunPod)`,
+      gallery.add({ path, source: photos.length ? (m.kind === 'edit' ? 'edit' : 'local') : 'generate', prompt: req.text, model: `${m.name} (${isWavespeed(m) ? 'WaveSpeed' : 'RunPod'})`,
         params: { ...p, prompt: undefined }, seed: p.seed, parent, projectId: project.id, chatId: chat.id })
     }
     push({ role: 'assistant', _media: r.paths,
-      content: `Готово на RunPod (${m.name}) за ${r.seconds} с${r.cold ? ', включая запуск видеокарты' : ''}${r.kept != null ? ` · из генерации взято ${Math.round(r.kept * 100)}% кадра, остальное — исходное фото` : ''} — сохранено в ` + r.paths.map((x) => relative(root, x)).join(', ') })
+      content: `Готово на ${isWavespeed(m) ? 'WaveSpeed' : 'RunPod'} (${m.name}) за ${r.seconds} с${r.cold ? ', включая запуск видеокарты' : ''}${r.kept != null ? ` · из генерации взято ${Math.round(r.kept * 100)}% кадра, остальное — исходное фото` : ''} — сохранено в ` + r.paths.map((x) => relative(root, x)).join(', ') })
   } catch (e) {
     push({ role: 'assistant', content: (e as Error).message, _error: true })
   } finally {
@@ -825,6 +833,15 @@ function handlers() {
     secrets.set('app:runpod', key.trim())
   })
   h('runpod:removeKey', () => secrets.remove('app:runpod'))
+  h('wavespeed:status', async () => {
+    const key = secrets.get('app:wavespeed')
+    return { key: !!key, balance: key ? await wavespeed.balance(key) : null }
+  })
+  h('wavespeed:setKey', async (_e, key: string) => {
+    if ((await wavespeed.balance(key.trim())) === null) throw new Error('Ключ WaveSpeed не подошёл')
+    secrets.set('app:wavespeed', key.trim())
+  })
+  h('wavespeed:removeKey', () => secrets.remove('app:wavespeed'))
 
   h('telegram:unlink', () => {
     telegram.stop()

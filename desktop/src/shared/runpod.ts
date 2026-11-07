@@ -1,6 +1,6 @@
 // «Картинка Pro»: модели на своём RunPod Serverless (ComfyUI). Каталог общий для интерфейса и основного процесса.
 
-export type ProFamily = 'qwen-edit' | 'kontext' | 'qwen-image' | 'chroma' | 'zimage' | 'sdxl'
+export type ProFamily = 'qwen-edit' | 'kontext' | 'qwen-image' | 'chroma' | 'zimage' | 'sdxl' | 'qwen3-pro'
 
 export interface ProModel {
   id: string
@@ -14,6 +14,8 @@ export interface ProModel {
   /** работает ли негатив: в быстром режиме у Qwen Edit его нет */
   negative: (fast: boolean) => boolean
   lora: boolean
+  /** где считается: свой RunPod (по умолчанию) или WaveSpeedAI по API (file — путь модели в их API) */
+  provider?: 'runpod' | 'wavespeed'
   /** доступно «Макс. качество» — полная bf16-модель на видеокарте 48 ГБ+ */
   quality?: boolean
   note: string
@@ -22,6 +24,16 @@ export interface ProModel {
 }
 
 export const PRO_MODELS: ProModel[] = [
+  {
+    id: 'ws-qwen3-pro-edit', name: 'Qwen Image 3 Pro Edit', family: 'qwen3-pro', kind: 'edit', maxRefs: 3, provider: 'wavespeed',
+    negative: () => false, lora: false, file: 'alibaba/qwen-image-3.0-pro/edit',
+    note: 'Закрытая модель Alibaba через WaveSpeed: правка по 1–3 фото, лучшая кожа и детали. ~$0.04 (2K — ~$0.08) за картинку.',
+  },
+  {
+    id: 'ws-qwen3-pro', name: 'Qwen Image 3 Pro', family: 'qwen3-pro', kind: 'gen', maxRefs: 0, provider: 'wavespeed',
+    negative: () => false, lora: false, file: 'alibaba/qwen-image-3.0-pro/text-to-image',
+    note: 'Закрытая модель Alibaba через WaveSpeed: картинка по тексту. ~$0.04 (2K — ~$0.075).',
+  },
   {
     id: 'qwen-edit-2511', name: 'Qwen Edit 2511', family: 'qwen-edit', kind: 'edit', maxRefs: 3, fast: true,
     negative: (fast) => !fast, lora: true, quality: true, file: 'qwen_image_edit_2511_fp8mixed.safetensors',
@@ -62,7 +74,8 @@ export const PRO_MODELS: ProModel[] = [
 /** Имя эндпоинта для «Макс. качества» — программа находит его в аккаунте RunPod сама. */
 export const HQ_ENDPOINT_NAME = 'mouse-king-pro-hq'
 
-export const proModel = (id?: string) => PRO_MODELS.find((m) => m.id === id) || PRO_MODELS[0]
+export const proModel = (id?: string) => PRO_MODELS.find((m) => m.id === id) || PRO_MODELS.find((m) => m.id === 'qwen-edit-2511')!
+export const isWavespeed = (m: ProModel) => m.provider === 'wavespeed'
 
 export interface ProLora { name: string; weight: number }
 

@@ -82,7 +82,7 @@ export interface ProResult {
 }
 
 /** Совместить генерацию с исходным фото и взять из неё только изменённое. Размер — больший из двух. */
-function keepSource(photo: string, png: Buffer): { png: Buffer; changed: number } | null {
+export function keepSource(photo: string, png: Buffer): { png: Buffer; changed: number } | null {
   try {
     let orig = nativeImage.createFromPath(photo)
     let gen = nativeImage.createFromBuffer(png)

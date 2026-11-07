@@ -4,7 +4,7 @@ import { api } from './api'
 import { get, set, type Artifact, type PanelTab } from './store'
 import { baseName, fileUrl } from './format'
 import { aspectForPhoto, isReferenceModel, photoProblem, photoSibling } from '@shared/video'
-import { proModel } from '@shared/runpod'
+import { isWavespeed, proModel } from '@shared/runpod'
 
 let toastId = 0
 export function toast(text: string, kind?: 'error' | 'ok') {
@@ -160,7 +160,7 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
   }
   if (mode === 'pro') {
     const s = get().settings!
-    if (!s.runpod_endpoint) {
+    if (!s.runpod_endpoint && !isWavespeed(proModel(model.id))) {
       toast('Подключите RunPod: Настройки → RunPod', 'error')
       set({ settingsOpen: true })
       return false
@@ -181,7 +181,8 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
     if (negative && !m.negative(fast)) toast(`${m.name}${fast ? ' в быстром режиме' : ''} не учитывает негатив — отправляю без него`, 'ok')
     extra = { ...extra, pro: {
       model: m.id, prompt: text, fast, negative: m.negative(fast) ? negative : undefined, strength: o.strength, aspect: o.aspect as any,
-      upscale: o.upscale, hires: m.kind === 'edit' && (o.hires ?? true), detail: m.family !== 'zimage' && (o.detail ?? m.kind === 'edit'),
+      upscale: !isWavespeed(m) && o.upscale, hires: isWavespeed(m) ? !!o.hires : m.kind === 'edit' && (o.hires ?? true),
+      detail: !isWavespeed(m) && m.family !== 'zimage' && (o.detail ?? m.kind === 'edit'),
       maxq: !!m.quality && o.maxq, keep: m.kind === 'edit' ? o.keep !== false : undefined, loras: (o.loras || []).filter((l) => l.name && m.lora),
     } }
     params = undefined

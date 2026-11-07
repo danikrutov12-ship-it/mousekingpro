@@ -372,6 +372,54 @@ export function BackgroundSwitch({ settings }: { settings: Settings }) {
 }
 
 /** RunPod: ключ (шифруется), ID эндпоинта, баланс и состояние видеокарт для «Картинки Pro». */
+/** Ключ WaveSpeedAI — для Qwen Image 3 Pro в «Картинке Pro». */
+function WavespeedBlock() {
+  const [st, setSt] = useState<{ key: boolean; balance: number | null } | null>(null)
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = () => api.wavespeed.status().then(setSt).catch(() => setSt(null))
+  useEffect(() => {
+    load()
+  }, [])
+  return (
+    <>
+      <h3 style={{ marginTop: 26 }}>WaveSpeed</h3>
+      <div className="hint" style={{ marginBottom: 14, fontSize: 13, color: 'var(--text-2)' }}>
+        Qwen Image 3 Pro (закрытая модель Alibaba) по API: оплата за картинку (~$0.04, 2K — ~$0.08), видеокарта не нужна.
+      </div>
+      {!st?.key ? (
+        <div className="field">
+          <label>Ключ API WaveSpeed</label>
+          <div className="row-end">
+            <input className="input mono" type="password" placeholder="ключ из wavespeed.ai/accesskey" value={key} onChange={(e) => setKey(e.target.value)} />
+            <button className="btn primary" disabled={!key.trim() || busy} onClick={async () => {
+              setBusy(true)
+              try {
+                await api.wavespeed.setKey(key)
+                setKey('')
+                toast('Ключ WaveSpeed сохранён', 'ok')
+                load()
+              } catch (e) {
+                toast(errText(e), 'error')
+              }
+              setBusy(false)
+            }}>{busy ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}Сохранить</button>
+          </div>
+          <div className="hint">wavespeed.ai → Access Keys. Хранится только на этом компьютере, зашифрованным.</div>
+        </div>
+      ) : (
+        <div className="toggle-row">
+          <div className="t"><b>Ключ сохранён</b><span>{st.balance != null ? `Баланс WaveSpeed: $${st.balance.toFixed(2)}` : 'Баланс не получен'}</span></div>
+          <button className="btn ghost danger" onClick={async () => {
+            await api.wavespeed.removeKey()
+            load()
+          }}><Trash2 size={14} />Удалить ключ</button>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function RunpodTab({ settings }: { settings: Settings }) {
   const [st, setSt] = useState<Awaited<ReturnType<typeof api.runpod.status>> | null>(null)
   const [key, setKey] = useState('')
@@ -448,6 +496,7 @@ export function RunpodTab({ settings }: { settings: Settings }) {
       <button className="btn" disabled={checking} onClick={check}>
         {checking ? <Loader2 size={14} className="spin" /> : <Play size={14} />}{checking ? 'Проверяю…' : 'Проверить подключение'}
       </button>
+      <WavespeedBlock />
     </>
   )
 }

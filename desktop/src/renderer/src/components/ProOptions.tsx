@@ -1,4 +1,4 @@
-import { Ban, CheckCircle2, Info, Plus, ShieldCheck, X, Zap } from 'lucide-react'
+import { Ban, CheckCircle2, Gem, Info, Maximize, Plus, ShieldCheck, Sparkles, X, Zap } from 'lucide-react'
 import { proModel } from '@shared/runpod'
 import type { Model } from '@shared/types'
 import { saveSettings } from '../lib/actions'
@@ -18,6 +18,9 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
   const fast = !!(m.fast && opts.fast)
   const negOk = m.negative(fast)
   const loras = opts.loras || []
+  // по умолчанию для правки по фото: больше деталей и текстура (см. actions.ts)
+  const hires = opts.hires ?? true
+  const detail = opts.detail ?? m.kind === 'edit'
   const negNote = negOk ? <><CheckCircle2 size={13} />Негатив работает</>
     : m.fast && fast ? <><Info size={13} />В быстром режиме негатив не учитывается — выключите «Быстро»</>
       : <><Info size={13} />{m.name} не поддерживает негатив — поле не учитывается</>
@@ -63,6 +66,21 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
           <select className="input" style={{ width: 'auto', height: 30, padding: '0 8px' }} value={opts.aspect || '1:1'} onChange={(e) => upd({ aspect: e.target.value })}>
             {ASPECTS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
+        )}
+        {m.kind === 'edit' && (
+          <label className={`chip-toggle ${hires ? 'on' : ''}`} title="Фото обрабатывается в ~1.6 МП вместо 1 МП: больше деталей, примерно в 1.7 раза дольше">
+            <input type="checkbox" checked={hires} onChange={(e) => upd({ hires: e.target.checked })} /><Maximize size={13} />Больше деталей
+          </label>
+        )}
+        {m.family !== 'zimage' && (
+          <label className={`chip-toggle ${detail ? 'on' : ''}`} title="Второй лёгкий проход фотореалистичной моделью (Z-Image): возвращает поры кожи и фактуру ткани, форму и цвета не меняет. +5–10 с">
+            <input type="checkbox" checked={detail} onChange={(e) => upd({ detail: e.target.checked })} /><Sparkles size={13} />Текстура
+          </label>
+        )}
+        {m.quality && (
+          <label className={`chip-toggle ${opts.maxq ? 'on' : ''}`} title="Полная версия модели (bf16, 41 ГБ) вместо сжатой: точнее мелкие детали. Идёт на видеокартах 48 ГБ+ — дороже примерно в 1.5–2 раза, первый запуск дольше">
+            <input type="checkbox" checked={!!opts.maxq} onChange={(e) => upd({ maxq: e.target.checked })} /><Gem size={13} />Макс. качество
+          </label>
         )}
         <label className={`chip-toggle ${opts.upscale ? 'on' : ''}`} title="Увеличить результат в 2 раза (4x-UltraSharp)">
           <input type="checkbox" checked={!!opts.upscale} onChange={(e) => upd({ upscale: e.target.checked })} />Увеличить ×2

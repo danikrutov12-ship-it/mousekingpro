@@ -14,6 +14,8 @@ export interface ProModel {
   /** работает ли негатив: в быстром режиме у Qwen Edit его нет */
   negative: (fast: boolean) => boolean
   lora: boolean
+  /** доступно «Макс. качество» — полная bf16-модель на видеокарте 48 ГБ+ */
+  quality?: boolean
   note: string
   /** файл модели на сетевом диске (для проверки и SDXL-чекпоинтов) */
   file: string
@@ -22,7 +24,7 @@ export interface ProModel {
 export const PRO_MODELS: ProModel[] = [
   {
     id: 'qwen-edit-2511', name: 'Qwen Edit 2511', family: 'qwen-edit', kind: 'edit', maxRefs: 3, fast: true,
-    negative: (fast) => !fast, lora: true, file: 'qwen_image_edit_2511_fp8mixed.safetensors',
+    negative: (fast) => !fast, lora: true, quality: true, file: 'qwen_image_edit_2511_fp8mixed.safetensors',
     note: 'Правка по 1–3 фото: одежда, фон, поза, свет — человек остаётся тем же. Главная модель.',
   },
   {
@@ -57,6 +59,9 @@ export const PRO_MODELS: ProModel[] = [
   },
 ]
 
+/** Имя эндпоинта для «Макс. качества» — программа находит его в аккаунте RunPod сама. */
+export const HQ_ENDPOINT_NAME = 'mouse-king-pro-hq'
+
 export const proModel = (id?: string) => PRO_MODELS.find((m) => m.id === id) || PRO_MODELS[0]
 
 export interface ProLora { name: string; weight: number }
@@ -75,6 +80,12 @@ export interface ProParams {
   loras?: ProLora[]
   /** правка по фото: из генерации взять только изменённое, остальное — пиксели оригинала (main/blend.ts) */
   keep?: boolean
+  /** правка: фото в ~1.6 МП вместо 1 МП — больше деталей, ~1.7× дольше */
+  hires?: boolean
+  /** правка: второй проход Z-Image Turbo на малой силе — возвращает текстуру кожи и ткани */
+  detail?: boolean
+  /** Qwen Edit: полная bf16-модель (отдельный эндпоинт с видеокартами 48 ГБ+) */
+  maxq?: boolean
   /** увеличить результат ×2 (4x-UltraSharp) */
   upscale?: boolean
 }
@@ -95,5 +106,6 @@ export const MODEL_FILES: [string, string, string][] = [
   ['clip', 'qwen_3_4b_fp8_mixed.safetensors', 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors'],
   ['checkpoints', 'RealVisXL_V5.0_fp16.safetensors', 'https://huggingface.co/SG161222/RealVisXL_V5.0/resolve/main/RealVisXL_V5.0_fp16.safetensors'],
   ['checkpoints', 'Juggernaut-XI-byRunDiffusion.safetensors', 'https://huggingface.co/RunDiffusion/Juggernaut-XI-v11/resolve/main/Juggernaut-XI-byRunDiffusion.safetensors'],
+  ['unet', 'qwen_image_edit_2511_bf16.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors'],
   ['upscale_models', '4x-UltraSharp.safetensors', 'https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.safetensors'],
 ]

@@ -2,7 +2,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { nativeImage } from 'electron'
-import { proModel, type ProModel, type ProParams } from '@shared/runpod'
+import { HQ_ENDPOINT_NAME, proModel, type ProModel, type ProParams } from '@shared/runpod'
 import { keepOriginal } from './blend'
 import { buildWorkflow } from './workflows'
 
@@ -30,6 +30,18 @@ async function call(cfg: RunpodCfg, path: string, body?: unknown) {
 
 /** Состояние эндпоинта: сколько рабочих готово, просыпается, в очереди. */
 export const health = (cfg: RunpodCfg) => call(cfg, '/health')
+
+/** Найти эндпоинт по имени в аккаунте (для «Макс. качества» — отдельный, с видеокартами 48 ГБ+). */
+const found = new Map<string, string>()
+export async function endpointByName(key: string, name: string): Promise<string | null> {
+  if (found.has(name)) return found.get(name)!
+  const r = await fetch('https://rest.runpod.io/v1/endpoints', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(20_000) })
+  if (!r.ok) return null
+  const list: { id: string; name: string }[] = await r.json().catch(() => [])
+  const id = list.find((e) => e.name === name)?.id ?? null
+  if (id) found.set(name, id)
+  return id
+}
 
 /** Баланс аккаунта RunPod (GraphQL). */
 export async function balance(key: string): Promise<number | null> {
@@ -95,6 +107,11 @@ export async function generate(
   status: (s: string) => void, stopped: () => boolean,
 ): Promise<ProResult> {
   const m: ProModel = proModel(p.model)
+  if (p.maxq && m.quality) {
+    const hq = await endpointByName(cfg.key, HQ_ENDPOINT_NAME).catch(() => null)
+    if (!hq) throw new Error(`Для «Макс. качества» нужен эндпоинт RunPod с именем ${HQ_ENDPOINT_NAME} (видеокарты 48 ГБ+)`)
+    cfg = { ...cfg, endpoint: hq }
+  }
   if (m.kind === 'edit' && !photos.length) throw new Error(`${m.name} правит фото — прикрепите хотя бы одно`)
   const names = photos.slice(0, m.maxRefs).map((_, i) => `ref_${i + 1}.jpg`)
   const workflow = buildWorkflow(p, names)

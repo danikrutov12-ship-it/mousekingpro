@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { nativeImage } from 'electron'
 import { HQ_ENDPOINT_NAME, proModel, type ProModel, type ProParams } from '@shared/runpod'
+import type { RunpodSpendInfo } from '@shared/types'
 import { keepOriginal } from './blend'
 import { buildWorkflow } from './workflows'
 
@@ -51,6 +52,47 @@ export async function balance(key: string): Promise<number | null> {
   })
   const d = await r.json().catch(() => null)
   return d?.data?.myself?.clientBalance ?? null
+}
+
+/** Расходы без подсчёта картинок (его добавляет index.ts по галерее). */
+export type RunpodSpend = Omit<RunpodSpendInfo, 'images'>
+
+async function rest(key: string, path: string) {
+  const r = await fetch(`https://rest.runpod.io/v1/${path}`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(20_000) })
+  if (!r.ok) throw new Error(`RunPod ${r.status}`)
+  return r.json()
+}
+
+/** Расходы RunPod: видеокарты (по типам), диск, текущая ставка и баланс. */
+export async function spend(key: string): Promise<RunpodSpend> {
+  const now = new Date()
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
+  const today = now.toISOString().slice(0, 10)
+  const q = `bucketSize=day&startTime=${start}&endTime=${now.toISOString()}`
+  const [gpu, disk, me] = await Promise.all([
+    rest(key, `billing/endpoints?${q}&grouping=gpuTypeId`) as Promise<{ amount: number; timeBilledMs: number; gpuTypeId: string; time: string }[]>,
+    (rest(key, `billing/networkvolumes?${q}`) as Promise<{ amount: number }[]>).catch(() => []),
+    fetch('https://api.runpod.io/graphql', {
+      method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'query { myself { clientBalance currentSpendPerHr } }' }), signal: AbortSignal.timeout(20_000),
+    }).then((r) => r.json()).then((d) => d?.data?.myself).catch(() => null),
+  ])
+  const by = new Map<string, { usd: number; sec: number }>()
+  let month = 0, todaySum = 0
+  for (const b of gpu) {
+    month += b.amount
+    if (String(b.time).startsWith(today)) todaySum += b.amount
+    const name = String(b.gpuTypeId || '—').replace(/^NVIDIA (GeForce )?/, '')
+    const g = by.get(name) || { usd: 0, sec: 0 }
+    g.usd += b.amount
+    g.sec += (b.timeBilledMs || 0) / 1000
+    by.set(name, g)
+  }
+  return {
+    today: todaySum, month, disk: disk.reduce((s, b) => s + (b.amount || 0), 0),
+    perHour: me?.currentSpendPerHr ?? null, balance: me?.clientBalance ?? null,
+    gpus: [...by].map(([name, g]) => ({ name, ...g })).sort((a, b) => b.usd - a.usd),
+  }
 }
 
 /** Фото для отправки: длинная сторона до 1536 px, JPEG — чтобы запрос уложился в лимит RunPod (10 МБ). */

@@ -833,6 +833,16 @@ function handlers() {
     secrets.set('app:runpod', key.trim())
   })
   h('runpod:removeKey', () => secrets.remove('app:runpod'))
+  h('runpod:spend', async () => {
+    const key = secrets.get('app:runpod')
+    if (!key) return null
+    const r = await runpod.spend(key)
+    // картинок на своём RunPod с начала месяца — для средней цены одной
+    const now = new Date()
+    const from = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) / 1000
+    const images = gallery.list().filter((i) => i.created >= from && i.model?.endsWith('(RunPod)')).length
+    return { ...r, images }
+  })
   h('wavespeed:status', async () => {
     const key = secrets.get('app:wavespeed')
     return { key: !!key, balance: key ? await wavespeed.balance(key) : null }

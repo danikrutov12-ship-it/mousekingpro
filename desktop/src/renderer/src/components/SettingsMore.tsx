@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { McpServer, McpStatus, Schedule, Settings } from '@shared/types'
 import { refreshMemories, saveSettings, toast } from '../lib/actions'
 import { api } from '../lib/api'
+import { RunpodSpendBlock } from './RunpodSpend'
 import { useApp } from '../lib/store'
 
 const newId = () => Math.random().toString(36).slice(2, 10)
@@ -496,6 +497,7 @@ export function RunpodTab({ settings }: { settings: Settings }) {
       <button className="btn" disabled={checking} onClick={check}>
         {checking ? <Loader2 size={14} className="spin" /> : <Play size={14} />}{checking ? 'Проверяю…' : 'Проверить подключение'}
       </button>
+      {st?.key && <RunpodSpendBlock refresh={st} />}
       <WavespeedBlock />
     </>
   )

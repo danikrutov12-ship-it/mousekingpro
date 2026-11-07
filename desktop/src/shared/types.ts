@@ -356,6 +356,8 @@ export interface Api {
   }
   runpod: {
     status(): Promise<{ key: boolean; endpoint: string; balance: number | null; health: any; error?: string }>
+    /** расходы RunPod с начала месяца; null — ключа нет */
+    spend(): Promise<RunpodSpendInfo | null>
     setKey(key: string): Promise<void>
     removeKey(): Promise<void>
   }
@@ -422,4 +424,15 @@ export interface Api {
   version: string
   platform: string
   userName: string
+}
+
+export interface RunpodSpendInfo {
+  today: number
+  month: number
+  disk: number
+  perHour: number | null
+  balance: number | null
+  gpus: { name: string; usd: number; sec: number }[]
+  /** картинок на своём RunPod с начала месяца */
+  images: number
 }

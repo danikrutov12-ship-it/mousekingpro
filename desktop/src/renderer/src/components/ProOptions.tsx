@@ -3,6 +3,7 @@ import { isWavespeed, proModel } from '@shared/runpod'
 import type { Model } from '@shared/types'
 import { saveSettings } from '../lib/actions'
 import { set, useApp } from '../lib/store'
+import { RunpodSpendLine } from './RunpodSpend'
 
 type Opts = NonNullable<import('@shared/types').Settings['pro_opts']>
 const ASPECTS = ['1:1', '3:4', '4:3', '2:3', '3:2', '9:16', '16:9']
@@ -32,6 +33,7 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
         <div className="opt-warn">RunPod ещё не подключён: Настройки → RunPod (ключ и ID эндпоинта).</div>
       )}
       <div className="pro-note">{m.note}</div>
+      {configured && !ws && <RunpodSpendLine />}
       {m.kind === 'edit' && !photos && <div className="opt-warn">{m.name} правит фото — прикрепите от 1 до {m.maxRefs}.</div>}
       {photos > m.maxRefs && <div className="opt-warn">{m.maxRefs ? `${m.name} возьмёт первые ${m.maxRefs} фото из ${photos}.` : `${m.name} рисует только по тексту — фото не учитываются. Для правки выберите Qwen Image 3 Pro Edit.`}</div>}
 
@@ -84,7 +86,7 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
           </label>
         )}
         {m.quality && (
-          <label className={`chip-toggle ${opts.maxq ? 'on' : ''}`} title="Полная версия модели (bf16, 41 ГБ) вместо сжатой: точнее мелкие детали. Идёт на видеокартах 48 ГБ+ — дороже примерно в 1.5–2 раза, первый запуск дольше">
+          <label className={`chip-toggle ${opts.maxq ? 'on' : ''}`} title="Полная версия модели (bf16, 41 ГБ) вместо сжатой: точнее мелкие детали. Идёт на видеокартах 96 ГБ (RTX PRO 6000) — секунда примерно в 2.5 раза дороже, первый запуск дольше">
             <input type="checkbox" checked={!!opts.maxq} onChange={(e) => upd({ maxq: e.target.checked })} /><Gem size={13} />Макс. качество
           </label>
         )}

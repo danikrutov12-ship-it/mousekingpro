@@ -111,6 +111,27 @@ export function buildWorkflow(p: ProParams, images: string[]): Graph {
       finish(b, add('VAEDecode', { samples: sampled, vae }), p, seed)
       break
     }
+    case 'qwen-rapid': {
+      // Rapid AIO: полный чекпоинт (unet+clip+vae в одном файле), CFG 1 — поэтому негатив не работает.
+      // Настройки автора модели: 4–8 шагов, euler_ancestral/beta.
+      const fast = !!p.fast
+      const ckpt = add('CheckpointLoaderSimple', { ckpt_name: m.file })
+      const [model, clip] = withLoras(b, ckpt, p, out(ckpt, 1))
+      const vae = out(ckpt, 2)
+      const loaded = images.slice(0, 3).map((name) => add('LoadImage', { image: name }))
+      const first = keepAspect(b, loaded[0], editMp(p))
+      const refs: Record<string, Link> = { image1: first }
+      loaded.slice(1).forEach((l, i) => (refs[`image${i + 2}`] = l))
+      const encode = (prompt: string) => add('FluxKontextMultiReferenceLatentMethod', {
+        conditioning: add('TextEncodeQwenImageEditPlus', { clip, vae, prompt, ...refs }), reference_latents_method: 'index_timestep_zero',
+      })
+      const sampled = add('KSampler', {
+        model, seed, steps: fast ? 4 : 8, cfg: 1, sampler_name: 'euler_ancestral', scheduler: 'beta', denoise: 1,
+        positive: encode(p.prompt), negative: encode(''), latent_image: add('VAEEncode', { pixels: first, vae }),
+      })
+      finish(b, add('VAEDecode', { samples: sampled, vae }), p, seed)
+      break
+    }
     case 'kontext': {
       const clip = add('DualCLIPLoader', { clip_name1: 'clip_l.safetensors', clip_name2: 't5xxl_fp8_e4m3fn_scaled.safetensors', type: 'flux', device: 'default' })
       const vae = add('VAELoader', { vae_name: 'ae.safetensors' })

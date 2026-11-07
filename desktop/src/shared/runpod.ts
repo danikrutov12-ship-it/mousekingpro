@@ -1,6 +1,6 @@
 // «Картинка Pro»: модели на своём RunPod Serverless (ComfyUI). Каталог общий для интерфейса и основного процесса.
 
-export type ProFamily = 'qwen-edit' | 'kontext' | 'qwen-image' | 'chroma' | 'zimage' | 'sdxl' | 'qwen3-pro'
+export type ProFamily = 'qwen-edit' | 'qwen-rapid' | 'kontext' | 'qwen-image' | 'chroma' | 'zimage' | 'sdxl' | 'qwen3-pro'
 
 export interface ProModel {
   id: string
@@ -38,6 +38,11 @@ export const PRO_MODELS: ProModel[] = [
     id: 'qwen-edit-2511', name: 'Qwen Edit 2511', family: 'qwen-edit', kind: 'edit', maxRefs: 3, fast: true,
     negative: (fast) => !fast, lora: true, quality: true, file: 'qwen_image_edit_2511_fp8mixed.safetensors',
     note: 'Правка по 1–3 фото: одежда, фон, поза, свет — человек остаётся тем же. Главная модель.',
+  },
+  {
+    id: 'qwen-rapid', name: 'Qwen Rapid', family: 'qwen-rapid', kind: 'edit', maxRefs: 3, fast: true,
+    negative: () => false, lora: true, file: 'Qwen-Rapid-v23.safetensors',
+    note: 'Раздевание и ню: правка по 1–3 фото, человек остаётся тем же. Своя модель на твоём RunPod, без цензуры. Обычный режим — 8 шагов (так лучше), «Быстро» — 4 шага, грубее.',
   },
   {
     id: 'kontext-dev', name: 'Flux Kontext dev', family: 'kontext', kind: 'edit', maxRefs: 2,
@@ -121,4 +126,5 @@ export const MODEL_FILES: [string, string, string][] = [
   ['checkpoints', 'Juggernaut-XI-byRunDiffusion.safetensors', 'https://huggingface.co/RunDiffusion/Juggernaut-XI-v11/resolve/main/Juggernaut-XI-byRunDiffusion.safetensors'],
   ['unet', 'qwen_image_edit_2511_bf16.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors'],
   ['upscale_models', '4x-UltraSharp.safetensors', 'https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.safetensors'],
+  ['checkpoints', 'Qwen-Rapid-v23.safetensors', 'https://huggingface.co/Phr00t/Qwen-Image-Edit-Rapid-AIO/resolve/main/v23/Qwen-Rapid-AIO-NSFW-v23.safetensors'],
 ]

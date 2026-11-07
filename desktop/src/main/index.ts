@@ -459,7 +459,7 @@ async function runPro(req: SendRequest, settings: Settings, project: Project, ch
         params: { ...p, prompt: undefined }, seed: p.seed, parent, projectId: project.id, chatId: chat.id })
     }
     push({ role: 'assistant', _media: r.paths,
-      content: `Готово на RunPod (${m.name}) за ${r.seconds} с${r.cold ? ', включая запуск видеокарты' : ''} — сохранено в ` + r.paths.map((x) => relative(root, x)).join(', ') })
+      content: `Готово на RunPod (${m.name}) за ${r.seconds} с${r.cold ? ', включая запуск видеокарты' : ''}${r.kept != null ? ` · из генерации взято ${Math.round(r.kept * 100)}% кадра, остальное — исходное фото` : ''} — сохранено в ` + r.paths.map((x) => relative(root, x)).join(', ') })
   } catch (e) {
     push({ role: 'assistant', content: (e as Error).message, _error: true })
   } finally {

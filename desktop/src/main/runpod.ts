@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { nativeImage } from 'electron'
 import { proModel, type ProModel, type ProParams } from '@shared/runpod'
+import { keepOriginal } from './blend'
 import { buildWorkflow } from './workflows'
 
 // ---------------------------------------------------------------- клиент RunPod
@@ -62,7 +63,31 @@ function friendlyError(err: string): string | null {
   return `На диске RunPod нет файла модели «${m[2]}» — модели нужно докачать.`
 }
 
-export interface ProResult { paths: string[]; seconds: number; cold: boolean }
+export interface ProResult {
+  paths: string[]; seconds: number; cold: boolean
+  /** «Сохранять исходник»: доля кадра, взятая из генерации (null — не применялось или изменилось почти всё) */
+  kept?: number | null
+}
+
+/** Совместить генерацию с исходным фото и взять из неё только изменённое. Размер — больший из двух. */
+function keepSource(photo: string, png: Buffer): { png: Buffer; changed: number } | null {
+  try {
+    let orig = nativeImage.createFromPath(photo)
+    let gen = nativeImage.createFromBuffer(png)
+    if (orig.isEmpty() || gen.isEmpty()) return null
+    const o = orig.getSize(), g = gen.getSize()
+    const r0 = o.width / o.height, r1 = g.width / g.height
+    if (Math.abs(Math.log(r0 / r1)) > 0.05) return null // кадр другой формы — это уже не та же картинка
+    if (g.width * g.height > o.width * o.height) orig = orig.resize({ width: g.width, height: g.height, quality: 'best' })
+    else gen = gen.resize({ width: o.width, height: o.height, quality: 'best' })
+    const { width, height } = orig.getSize()
+    const r = keepOriginal({ data: orig.toBitmap(), width, height }, { data: gen.toBitmap(), width, height })
+    if (!r) return null
+    return { png: nativeImage.createFromBitmap(Buffer.from(r.out.data.buffer), { width, height }).toPNG(), changed: r.changed }
+  } catch {
+    return null
+  }
+}
 
 /** Запуск: отправить воркфлоу, ждать результат, сохранить картинки. */
 export async function generate(
@@ -94,12 +119,19 @@ export async function generate(
       if (!imgs.length) throw new Error('RunPod завершил задачу без картинки: ' + JSON.stringify(s.output).slice(0, 300))
       mkdirSync(outDir, { recursive: true })
       const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)
+      let kept: number | null = null
       const paths = imgs.map((im, i) => {
         const path = join(outDir, `pro-${m.id}-${stamp}${imgs.length > 1 ? '-' + (i + 1) : ''}.png`)
-        writeFileSync(path, Buffer.from(im.data, 'base64'))
+        let png: Buffer = Buffer.from(im.data, 'base64')
+        if (m.kind === 'edit' && p.keep && photos[0]) {
+          status('Переношу изменения на исходное фото…')
+          const r = keepSource(photos[0], png)
+          if (r) [png, kept] = [r.png, r.changed]
+        }
+        writeFileSync(path, png)
         return path
       })
-      return { paths, seconds: Math.round((s.executionTime || 0) / 1000), cold }
+      return { paths, seconds: Math.round((s.executionTime || 0) / 1000), cold, kept }
     } else if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(s.status)) {
       const err = typeof s.error === 'string' ? s.error : JSON.stringify(s.error || s.output || {})
       throw new Error(friendlyError(err) || `RunPod: ${s.status} — ${err.slice(0, 500)}`)

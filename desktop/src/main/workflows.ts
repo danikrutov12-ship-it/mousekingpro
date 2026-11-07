@@ -47,6 +47,10 @@ function startLatent(b: ReturnType<typeof builder>, p: ProParams, images: string
   return { latent: b.add(sd3 ? 'EmptySD3LatentImage' : 'EmptyLatentImage', { width, height, batch_size: 1 }), denoise: 1 }
 }
 
+/** ~1 МП с теми же пропорциями, стороны кратны 16 (так латент совпадает с фото пиксель в пиксель). */
+const keepAspect = (b: ReturnType<typeof builder>, image: Link) =>
+  b.add('ImageScaleToTotalPixels', { image, upscale_method: 'lanczos', megapixels: 1, resolution_steps: 16 })
+
 function finish(b: ReturnType<typeof builder>, image: Link, p: ProParams) {
   if (p.upscale) {
     const up = b.add('ImageUpscaleWithModel', { upscale_model: b.add('UpscaleModelLoader', { model_name: '4x-UltraSharp.safetensors' }), image })
@@ -72,7 +76,8 @@ export function buildWorkflow(p: ProParams, images: string[]): Graph {
       if (fast) model = add('LoraLoaderModelOnly', { model, lora_name: 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors', strength_model: 1 });
       [model] = withLoras(b, model, p)
       const loaded = images.slice(0, 3).map((name) => add('LoadImage', { image: name }))
-      const first = add('FluxKontextImageScale', { image: loaded[0] })
+      // Без подгонки под пресеты Flux: пропорции фото сохраняются, кадр не сдвигается и не обрезается.
+      const first = keepAspect(b, loaded[0])
       const refs: Record<string, Link> = { image1: first }
       loaded.slice(1).forEach((l, i) => (refs[`image${i + 2}`] = l))
       const encode = (prompt: string) => add('FluxKontextMultiReferenceLatentMethod', {
@@ -89,7 +94,7 @@ export function buildWorkflow(p: ProParams, images: string[]): Graph {
       const clip = add('DualCLIPLoader', { clip_name1: 'clip_l.safetensors', clip_name2: 't5xxl_fp8_e4m3fn_scaled.safetensors', type: 'flux', device: 'default' })
       const vae = add('VAELoader', { vae_name: 'ae.safetensors' })
       let [model] = withLoras(b, add('UNETLoader', { unet_name: m.file, weight_dtype: 'default' }), p)
-      const scaled = images.slice(0, 2).map((name) => add('FluxKontextImageScale', { image: add('LoadImage', { image: name }) }))
+      const scaled = images.slice(0, 2).map((name) => keepAspect(b, add('LoadImage', { image: name })))
       const latents = scaled.map((img) => add('VAEEncode', { pixels: img, vae }))
       let cond = add('CLIPTextEncode', { clip, text: p.prompt })
       for (const l of latents) cond = add('ReferenceLatent', { conditioning: cond, latent: l })

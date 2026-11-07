@@ -181,7 +181,7 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
     if (negative && !m.negative(fast)) toast(`${m.name}${fast ? ' в быстром режиме' : ''} не учитывает негатив — отправляю без него`, 'ok')
     extra = { ...extra, pro: {
       model: m.id, prompt: text, fast, negative: m.negative(fast) ? negative : undefined, strength: o.strength, aspect: o.aspect as any,
-      upscale: o.upscale, loras: (o.loras || []).filter((l) => l.name && m.lora),
+      upscale: o.upscale, keep: m.kind === 'edit' ? o.keep !== false : undefined, loras: (o.loras || []).filter((l) => l.name && m.lora),
     } }
     params = undefined
   }

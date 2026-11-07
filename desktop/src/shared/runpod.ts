@@ -73,6 +73,8 @@ export interface ProParams {
   aspect?: '1:1' | '3:4' | '4:3' | '9:16' | '16:9' | '2:3' | '3:2'
   seed?: number
   loras?: ProLora[]
+  /** правка по фото: из генерации взять только изменённое, остальное — пиксели оригинала (main/blend.ts) */
+  keep?: boolean
   /** увеличить результат ×2 (4x-UltraSharp) */
   upscale?: boolean
 }

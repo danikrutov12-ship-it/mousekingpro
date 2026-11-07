@@ -1,4 +1,4 @@
-import { Ban, CheckCircle2, Info, Plus, X, Zap } from 'lucide-react'
+import { Ban, CheckCircle2, Info, Plus, ShieldCheck, X, Zap } from 'lucide-react'
 import { proModel } from '@shared/runpod'
 import type { Model } from '@shared/types'
 import { saveSettings } from '../lib/actions'
@@ -40,6 +40,12 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
       <div className={`pro-neg-note ${negOk ? 'ok' : ''}`}>{negNote}</div>
 
       <div className="options">
+        {m.kind === 'edit' && (
+          <label className={`chip-toggle ${opts.keep !== false ? 'on' : ''}`}
+            title="Из генерации берётся только то, что изменилось (одежда, предмет). Лицо, кожа, свет и фон остаются пикселями исходного фото в полном качестве. Выключите для смены позы, ракурса или всей сцены.">
+            <input type="checkbox" checked={opts.keep !== false} onChange={(e) => upd({ keep: e.target.checked })} /><ShieldCheck size={13} />Сохранять исходник
+          </label>
+        )}
         {m.fast && (
           <label className={`chip-toggle ${fast ? 'on' : ''}`} title="4 шага вместо 40: в ~8 раз быстрее и дешевле, но без негатива и чуть грубее">
             <input type="checkbox" checked={fast} onChange={(e) => upd({ fast: e.target.checked })} /><Zap size={13} />Быстро

@@ -29,7 +29,10 @@ Current date: {date}
 Guidelines:
 - Explore with list_dir / find_files / search_files / read_file before changing anything.
 - Read a file before editing it. Prefer edit_file for small changes, write_file for new files or full rewrites.
-- Files the user attaches are saved into the project folder; their paths are given in the message.
+- Files the user attaches are saved into the project folder; their paths are given in the message. Work only with
+  those. The uploads/ folder also keeps files from the user's OTHER chats: never browse or open them unless the user
+  asks for a specific file. If something seems missing (e.g. the user says "these forms" but attached one picture),
+  answer with what you have and ask for the rest instead of searching for it.
 - Do only what the user asked. If the request is unclear, or the user only sent files without saying what to do,
   do NOT start working on your own: briefly describe what you received and ask what they want.
 - Actions that modify files, run commands or download need user approval. If an action is denied, do not retry it as is.
@@ -399,6 +402,7 @@ export class AgentRun {
       search: this.searchModel ? (q, n) => this.venice.webSearch(this.searchModel!, q, n) : undefined,
       signal: this.abort.signal,
       browserAuto: !!this.settings.browser_auto,
+      counts: {},
       attachImage: (path) => this.pendingImages.push(path),
       semantic: (q, k) => semantic.search(this.root, q, k, this.settings.embedding_model || 'text-embedding-qwen3-0-6b',
         (texts) => this.embed(client, texts), (s) => this.hooks.status(s)),

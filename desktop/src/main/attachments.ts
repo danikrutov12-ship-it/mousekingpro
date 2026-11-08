@@ -81,7 +81,7 @@ export function notes(list: Attachment[]): string {
       case 'folder':
         return `[Пользователь указал папку: ${a.path}]`
       case 'image':
-        return `[Прикреплено изображение: ${a.rel}]`
+        return `[Прикреплено изображение: ${a.rel} — ты видишь его в этом сообщении, если модель понимает картинки]`
       default:
         return `[Прикреплён файл: ${a.rel} (${humanSize(a.size || 0)})]`
     }

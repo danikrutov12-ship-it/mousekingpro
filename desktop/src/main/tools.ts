@@ -51,6 +51,8 @@ export interface ToolContext {
   delegate?(task: string, label: string): Promise<string>
   /** клики и ввод в браузере без вопроса */
   browserAuto?: boolean
+  /** счётчики вызовов за один ответ агента (общий объект для всех шагов) */
+  counts?: Record<string, number>
   /** работа с картинками через Venice (генерация, правка, увеличение…) */
   images?: ImageHooks
   /** живой вывод текущего инструмента (команды) */
@@ -841,6 +843,18 @@ async function firefoxScreenshot(ctx: ToolContext, a: { tab_id?: number }) {
   return `Снимок вкладки сохранён: ${file}` + (ctx.attachImage ? ' (картинка будет у тебя в следующем сообщении)' : '')
 }
 
+/** Просмотр картинки моделью со зрением — платный; больше LOOK_FREE за ответ — только с разрешения (защита от перебора папки). */
+const LOOK_FREE = 5
+async function describeImage(ctx: ToolContext, a: { path: string; task?: string }) {
+  const path = imgPath(ctx, a.path)
+  const n = ctx.counts ? (ctx.counts.describe = (ctx.counts.describe || 0) + 1) : 0
+  if (n > LOOK_FREE && !(await ctx.approve(`Посмотреть ещё одну картинку (${n}-ю за этот ответ)`,
+    `${rel(ctx, path)}\n\nАгент уже посмотрел ${n - 1} картинок подряд. Если он ищет не то — откажите и уточните задачу в чате.`))) {
+    return DENIED
+  }
+  return needImages(ctx).describe(path, a.task || 'caption')
+}
+
 async function semanticSearch(ctx: ToolContext, a: { query: string; k?: number }) {
   if (!ctx.semantic) return 'Поиск по смыслу недоступен'
   return ctx.semantic(a.query, Number(a.k ?? 8))
@@ -983,7 +997,7 @@ export const TOOLS: Record<string, [ToolFn, ReturnType<typeof schema>]> = {
     schema('upscale_image', 'Upscale an image 2x ($0.02) or 4x ($0.08).', { path: S, scale: { type: 'integer', enum: [2, 4] } }, ['path'])],
   remove_background: [async (ctx: ToolContext, a: { path: string }) => imgDone(ctx, await needImages(ctx).background(imgPath(ctx, a.path))),
     schema('remove_background', 'Remove the background (transparent PNG).', { path: S }, ['path'])],
-  describe_image: [async (ctx: ToolContext, a: { path: string; task?: string }) => needImages(ctx).describe(imgPath(ctx, a.path), a.task || 'caption'),
+  describe_image: [describeImage,
     schema('describe_image', 'Look at an image with a vision model: task caption (social media caption), alt, ocr (read text), ' +
       'critique (photo review), prompt (describe as a generation prompt), or any custom question.', { path: S, task: S }, ['path'])],
   update_plan: [updatePlan, schema('update_plan', 'Show the user a checklist of the task. Use it for any task with 3+ steps: ' +

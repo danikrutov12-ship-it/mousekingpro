@@ -1,4 +1,4 @@
-// Связь с Firefox пользователя через расширение «Mouse King Pro для Firefox» (desktop/firefox-extension).
+// Связь с Firefox пользователя через расширение «Mouse King Pro — Браузер» (desktop/firefox-extension).
 // Приложение слушает WebSocket только на 127.0.0.1; подключаться может лишь расширение (Origin moz-extension://)
 // с токеном, выданным при сопряжении: пользователь нажимает «Подключить» в настройках, и в течение 2 минут
 // первое обратившееся расширение получает токен. Сайты и чужие программы без токена ничего сделать не могут.
@@ -145,7 +145,7 @@ export function stop() {
   server = wss = client = null
 }
 
-export const NOT_CONNECTED = 'Firefox не подключён. Пользователю нужно открыть Firefox с расширением «Mouse King Pro для Firefox» ' +
+export const NOT_CONNECTED = 'Firefox не подключён. Пользователю нужно открыть Firefox с расширением «Mouse King Pro — Браузер» ' +
   '(Настройки → Firefox в приложении). Без него используй свой браузер: browser_open.'
 
 /** Команда расширению; ответ — то, что вернул background.js. */

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Подпись расширения «Mouse King Pro для Firefox» в Mozilla (частное, в каталоге не публикуется).
+# Подпись расширения «Mouse King Pro — Браузер» в Mozilla (частное, в каталоге не публикуется).
 # Ключи AMO берутся из ~/.amo-keys (две строки: JWT issuer, JWT secret) — https://addons.mozilla.org/developers/addon/api/key/
 # Перед подписью поднимите "version" в desktop/firefox-extension/manifest.json — одну версию Mozilla подписывает один раз.
 # Результат: desktop/build/firefox-extension.xpi — попадает в сборку программы (Настройки → Firefox → «Установить»).

@@ -536,16 +536,24 @@ export function FirefoxTab() {
       <div className="toggle-row">
         <div className="t">
           <b>{st?.connected ? '✓ Firefox подключён' : st?.error ? 'Связь недоступна' : 'Firefox не подключён'}</b>
-          <span>{st?.connected ? st.browser : st?.error || (st?.paired ? 'Откройте Firefox с расширением — подключится само.' : 'Установите расширение и нажмите «Подключить».')}</span>
+          <span>{st?.connected ? st.browser : st?.error || (st?.paired ? 'Откройте Firefox с расширением — подключится само.' : 'Сделайте шаги 1 и 2 ниже.')}</span>
         </div>
       </div>
+
       <div className="field">
-        <label>1. Расширение «Mouse King Pro для Firefox»</label>
+        <label>Шаг 1. Установите расширение «Mouse King Pro — Браузер»</label>
         <button className="btn" onClick={install}><Plug size={14} />Установить в Firefox</button>
-        <div className="hint">Firefox спросит «Добавить Mouse King Pro для Firefox?» — нажмите «Добавить». Ставится один раз.</div>
+        <ol className="ff-steps">
+          <li>Откроется Firefox и спросит «Добавить Mouse King Pro — Браузер?» — нажмите <b>«Добавить»</b>.</li>
+          <li>Если Firefox спросит, разрешить ли работу в приватных окнах, — как вам удобнее, это не обязательно.</li>
+          <li>Если Firefox не открылся сам: файл <code>mouse-king-pro-firefox.xpi</code> лежит в папке «Загрузки» — перетащите его в окно
+            Firefox или откройте Firefox → меню ☰ → «Дополнения и темы» → ⚙ → «Установить дополнение из файла».</li>
+          <li>Ставится один раз — дальше Firefox сам запускает расширение.</li>
+        </ol>
       </div>
+
       <div className="field">
-        <label>2. Подключение</label>
+        <label>Шаг 2. Подключите</label>
         <div className="row-end" style={{ justifyContent: 'flex-start', gap: 8 }}>
           <button className="btn primary" disabled={!!left || st?.connected} onClick={() => api.firefox.pair()}>
             {left ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}{left ? `Жду Firefox… ${left} с` : 'Подключить'}
@@ -554,7 +562,43 @@ export function FirefoxTab() {
             <button className="btn ghost danger" onClick={() => api.firefox.unpair()}><Trash2 size={14} />Отключить Firefox</button>
           )}
         </div>
-        <div className="hint">После «Подключить» в течение 2 минут расширение само получит доступ. Повторять не нужно — связь сохранится.</div>
+        <ol className="ff-steps">
+          <li>Нажмите «Подключить», пока Firefox открыт, — в течение 2 минут расширение само получит доступ, и здесь появится «✓ Firefox подключён».</li>
+          <li>Делается один раз: дальше Firefox и Mouse King Pro находят друг друга сами при каждом запуске.</li>
+        </ol>
+      </div>
+
+      <div className="field">
+        <label>Шаг 3. Просите агента в чате</label>
+        <ul className="ff-steps">
+          <li>«Прочитай страницу, которая открыта у меня в Firefox, и перескажи главное»</li>
+          <li>«Посмотри мои вкладки и сравни цены на этот товар»</li>
+          <li>«Сделай снимок открытой вкладки — что не так с вёрсткой?»</li>
+          <li>«Заполни форму на открытой странице: имя Иван, телефон…» — каждое нажатие и ввод агент сначала покажет вам</li>
+        </ul>
+        <div className="hint">Говорите «мой браузер», «открытая страница», «у меня в Firefox» — так агент поймёт, что нужен ваш Firefox, а не его собственный браузер.</div>
+      </div>
+
+      <div className="field">
+        <label>Значок расширения в панели Firefox</label>
+        <ul className="ff-steps">
+          <li>Корона без пометок — подключено, всё работает.</li>
+          <li>Корона с <b>«!»</b> — Mouse King Pro не запущен. Запустите программу, связь восстановится сама.</li>
+          <li>Корона с <b>«?»</b> — расширение ещё не подключено: нажмите «Подключить» выше.</li>
+          <li>Нажмите на значок — расширение покажет своё состояние и что сделать.</li>
+        </ul>
+      </div>
+
+      <div className="field">
+        <label>Важно знать</label>
+        <ul className="ff-steps">
+          <li>Без вопроса агент только смотрит. Клики, ввод текста, открытие и закрытие вкладок — каждый раз с вашим подтверждением.</li>
+          <li>Работает, пока открыты и Firefox, и Mouse King Pro. Связь идёт только внутри этого компьютера.</li>
+          <li>Служебные страницы (about:, настройки Firefox, магазин дополнений) Firefox расширениям читать не даёт.</li>
+          <li>Для снимка экрана нужная вкладка становится активной.</li>
+          <li>Подключено несколько профилей Firefox сразу — работает тот, что подключился последним.</li>
+          <li>«Отключить Firefox» забывает все подключения; чтобы вернуть — снова «Подключить». Удалить расширение: Firefox → «Дополнения и темы».</li>
+        </ul>
       </div>
     </>
   )

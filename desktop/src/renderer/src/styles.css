@@ -1003,3 +1003,6 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
   .ref-info .sub { display: none; }
   .ref-model { max-width: 100%; flex: 1; }
 }
+
+.ff-steps { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 12.5px; color: var(--text-2); }
+.ff-steps code { font-size: 11.5px; }

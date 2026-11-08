@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font: 13px/1.45 system-ui, sans-serif; margin: 0; padding: 14px 16px; width: 290px; color: #1f1d1a; background: #faf8f5; }
+    @media (prefers-color-scheme: dark) { body { color: #ece8e1; background: #1f1d1a; } .hint { color: #a8a29a !important; } }
+    h1 { font-size: 14px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+    h1 img { width: 20px; height: 20px; }
+    .st { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #9ca3af; }
+    .connected .dot { background: #16a34a; }
+    .unpaired .dot { background: #d97706; }
+    .hint { color: #6b655c; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1><img src="icon-32.png" alt="">Mouse King Pro</h1>
+  <div id="st" class="st"><span class="dot"></span><span id="t">…</span></div>
+  <div id="hint" class="hint"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

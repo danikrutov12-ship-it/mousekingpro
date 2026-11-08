@@ -1,6 +1,6 @@
 import { Brain, CheckCircle2, Clock, Loader2, Pencil, Play, Plug, Plus, Send, ShieldAlert, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { McpServer, McpStatus, Schedule, Settings } from '@shared/types'
+import type { FirefoxStatus, McpServer, McpStatus, Schedule, Settings } from '@shared/types'
 import { refreshMemories, saveSettings, toast } from '../lib/actions'
 import { api } from '../lib/api'
 import { RunpodSpendBlock } from './RunpodSpend'
@@ -499,6 +499,63 @@ export function RunpodTab({ settings }: { settings: Settings }) {
       </button>
       {st?.key && <RunpodSpendBlock refresh={st} />}
       <WavespeedBlock />
+    </>
+  )
+}
+
+// ---------------------------------------------------------------- Firefox пользователя
+
+export function FirefoxTab() {
+  const [st, setSt] = useState<FirefoxStatus | null>(null)
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    api.firefox.status().then(setSt)
+    const off = api.firefox.onChange(setSt)
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => {
+      off()
+      clearInterval(t)
+    }
+  }, [])
+  const left = st?.pairingUntil ? Math.max(0, Math.round((st.pairingUntil - now) / 1000)) : 0
+  const install = async () => {
+    try {
+      const r = await api.firefox.install()
+      toast(r === 'opened' ? 'Firefox предложит добавить расширение — нажмите «Добавить»' : 'Перетащите файл mouse-king-pro-firefox.xpi в окно Firefox', 'ok')
+    } catch (e) {
+      toast(errText(e), 'error')
+    }
+  }
+  return (
+    <>
+      <h3>Firefox</h3>
+      <div className="hint" style={{ marginBottom: 14, fontSize: 13, color: 'var(--text-2)' }}>
+        Агент сможет смотреть ваш Firefox: список вкладок, текст открытой страницы и снимок экрана — с вашими входами на сайты.
+        Нажать, ввести текст, открыть или закрыть вкладку он может только после вашего подтверждения.
+      </div>
+      <div className="toggle-row">
+        <div className="t">
+          <b>{st?.connected ? '✓ Firefox подключён' : st?.error ? 'Связь недоступна' : 'Firefox не подключён'}</b>
+          <span>{st?.connected ? st.browser : st?.error || (st?.paired ? 'Откройте Firefox с расширением — подключится само.' : 'Установите расширение и нажмите «Подключить».')}</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>1. Расширение «Mouse King Pro для Firefox»</label>
+        <button className="btn" onClick={install}><Plug size={14} />Установить в Firefox</button>
+        <div className="hint">Firefox спросит «Добавить Mouse King Pro для Firefox?» — нажмите «Добавить». Ставится один раз.</div>
+      </div>
+      <div className="field">
+        <label>2. Подключение</label>
+        <div className="row-end" style={{ justifyContent: 'flex-start', gap: 8 }}>
+          <button className="btn primary" disabled={!!left || st?.connected} onClick={() => api.firefox.pair()}>
+            {left ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}{left ? `Жду Firefox… ${left} с` : 'Подключить'}
+          </button>
+          {!!st?.paired && (
+            <button className="btn ghost danger" onClick={() => api.firefox.unpair()}><Trash2 size={14} />Отключить Firefox</button>
+          )}
+        </div>
+        <div className="hint">После «Подключить» в течение 2 минут расширение само получит доступ. Повторять не нужно — связь сохранится.</div>
+      </div>
     </>
   )
 }

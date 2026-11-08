@@ -355,6 +355,14 @@ export interface Api {
     merge(projectId: string, chatId: string): Promise<string>
     push(projectId: string, chatId: string): Promise<{ ok: boolean; text: string; url?: string }>
   }
+  firefox: {
+    status(): Promise<FirefoxStatus>
+    pair(): Promise<void>
+    unpair(): Promise<void>
+    /** открыть файл расширения в Firefox (установка); строка — что сделано, для подсказки */
+    install(): Promise<string>
+    onChange(cb: (s: FirefoxStatus) => void): () => void
+  }
   runpod: {
     status(): Promise<{ key: boolean; endpoint: string; balance: number | null; health: any; error?: string }>
     /** расходы RunPod с начала месяца; null — ключа нет */
@@ -436,4 +444,17 @@ export interface RunpodSpendInfo {
   gpus: { name: string; usd: number; sec: number }[]
   /** картинок на своём RunPod с начала месяца */
   images: number
+}
+
+export interface FirefoxStatus {
+  /** сервер слушает порт */
+  listening: boolean
+  error?: string
+  connected: boolean
+  /** версия Firefox и расширения */
+  browser?: string
+  /** ждём сопряжения до этого времени (ms) */
+  pairingUntil?: number
+  /** выданных токенов (сопряжённых профилей Firefox) */
+  paired: number
 }

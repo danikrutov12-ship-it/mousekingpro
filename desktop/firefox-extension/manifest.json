@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "Mouse King Pro для Firefox",
+  "version": "1.0.0",
+  "description": "Даёт ИИ-агенту Mouse King Pro на этом компьютере смотреть открытые вкладки и, с вашего подтверждения, действовать в них.",
+  "icons": { "16": "icon-16.png", "32": "icon-32.png", "48": "icon-48.png", "96": "icon-96.png" },
+  "permissions": ["tabs", "<all_urls>", "storage"],
+  "background": { "scripts": ["background.js"], "persistent": true },
+  "browser_action": {
+    "default_title": "Mouse King Pro",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icon-16.png", "32": "icon-32.png" }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "firefox@mouseking.pro",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  }
+}

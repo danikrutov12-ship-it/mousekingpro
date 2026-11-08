@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createTwoFilesPatch } from 'diff'
 import { homedir, tmpdir, userInfo } from 'node:os'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { imagePrice } from '@shared/pricing'
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, nativeTheme, Notification, session, shell } from 'electron'
 import type { ApprovalAnswer, Attachment, BatchOp, Chat, McpServer, MediaOp, Message, Mode, Model, Project, RunEvent, Schedule, SendRequest, Server, Settings } from '@shared/types'
@@ -15,6 +15,7 @@ import { APP_DIR, loadSettings, saveSettings } from './config'
 import * as browser from './browser'
 import * as batch from './batch'
 import * as gallery from './gallery'
+import * as firefox from './firefox'
 import * as git from './git'
 import * as images from './images'
 import * as jobs from './jobs'
@@ -443,6 +444,28 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
   }
 }
 
+/** Установка расширения в Firefox: копируем подписанный .xpi в «Загрузки» (snap-версия Firefox не видит файлы
+ *  внутри AppImage и /tmp) и открываем его Firefox'ом — тот сам покажет «Добавить расширение?». */
+function installFirefoxExtension(): string {
+  const src = app.isPackaged ? join(process.resourcesPath, 'firefox-extension.xpi') : resolve(__dirname, '../../build/firefox-extension.xpi')
+  if (!existsSync(src)) throw new Error('Файл расширения не найден в программе — обновите Mouse King Pro')
+  const dest = join(app.getPath('downloads'), 'mouse-king-pro-firefox.xpi')
+  mkdirSync(dirname(dest), { recursive: true })
+  copyFileSync(src, dest)
+  const candidates = isWin
+    ? [join(process.env.ProgramFiles || 'C:\\Program Files', 'Mozilla Firefox', 'firefox.exe'),
+        join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Mozilla Firefox', 'firefox.exe'),
+        join(process.env.LOCALAPPDATA || '', 'Mozilla Firefox', 'firefox.exe')]
+    : ['/snap/bin/firefox', '/usr/bin/firefox', '/usr/local/bin/firefox']
+  const bin = candidates.find((p) => p && existsSync(p)) || (!isWin && which('firefox') ? 'firefox' : '')
+  if (bin) {
+    spawn(bin, [dest], { detached: true, stdio: 'ignore' }).unref()
+    return 'opened'
+  }
+  shell.showItemInFolder(dest)
+  return 'revealed'
+}
+
 /** Старые чаты хранили только имена вложений: находим фото в uploads проекта, чтобы показать их картинками. */
 const MEDIA_RE = /\.(png|jpe?g|webp|gif|bmp|mp4|webm|mov|mkv)$/i
 function withPhotos(pid: string, chat: Chat | null): Chat | null {
@@ -849,6 +872,10 @@ function handlers() {
     secrets.set('app:runpod', key.trim())
   })
   h('runpod:removeKey', () => secrets.remove('app:runpod'))
+  h('firefox:status', () => firefox.status())
+  h('firefox:pair', () => firefox.pair())
+  h('firefox:unpair', () => firefox.unpairAll())
+  h('firefox:install', () => installFirefoxExtension())
   h('runpod:spend', async () => {
     const key = secrets.get('app:runpod')
     if (!key) return null
@@ -1368,6 +1395,7 @@ app.whenReady().then(() => {
   createWindow()
   textModels()
   if (secrets.get('app:telegram')) startTelegram()
+  if (!process.env.VA_SHOT || process.env.VA_FIREFOX) firefox.start(() => win && !win.isDestroyed() && win.webContents.send('firefox:changed', firefox.status()))
   scheduler.start(() => loadSettings().schedules || [], runSchedule)
   mcp.setMcpListener(() => win?.webContents.send('settings:changed', loadSettings()))
   // переход со старого названия: обновить пункт меню и автозапуск под именем Mouse King Pro
@@ -1382,6 +1410,7 @@ app.on('will-quit', () => {
   jobs.stopAll()
   terminal.killAll()
   browser.close()
+  firefox.stop()
   mcp.closeAll()
   telegram.stop()
 })

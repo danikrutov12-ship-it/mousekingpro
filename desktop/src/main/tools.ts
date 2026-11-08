@@ -13,6 +13,7 @@ import yauzl from 'yauzl'
 import type { FileChange, Server } from '@shared/types'
 import { APP_DIR } from './config'
 import * as browser from './browser'
+import * as firefox from './firefox'
 import { COMMAND_ENV, getJob, jobLog, startJob, stopJob } from './jobs'
 import { isWin, killTree, SHELL_NAME, shellArgv, spawnOpts, which } from './platform'
 
@@ -801,6 +802,45 @@ async function browserScreenshot(ctx: ToolContext) {
   return `Скриншот сохранён: ${file}` + (ctx.attachImage ? ' (картинка будет у тебя в следующем сообщении)' : '')
 }
 
+// ---------------------------------------------------------------- Firefox пользователя (расширение)
+// Чтение — без вопроса; всё, что меняет что-то в браузере пользователя, — только с подтверждением (browser_auto не действует).
+
+const tabArg = (a: { tab_id?: unknown }) => (a.tab_id == null || a.tab_id === '' ? undefined : Number(a.tab_id))
+const tabName = (a: { tab_id?: unknown }) => (tabArg(a) == null ? 'активная вкладка' : `вкладка ${tabArg(a)}`)
+
+async function firefoxClick(ctx: ToolContext, a: { tab_id?: number; index: number; why?: string }) {
+  if (!(await ctx.approve(`Нажать в вашем Firefox: элемент [${a.index}] (${tabName(a)})`, a.why || 'Агент хочет нажать на элемент страницы.'))) return DENIED
+  return firefox.click(tabArg(a), Number(a.index))
+}
+
+async function firefoxType(ctx: ToolContext, a: { tab_id?: number; index: number; text: string; submit?: boolean }) {
+  if (!(await ctx.approve(`Ввести текст в вашем Firefox: поле [${a.index}] (${tabName(a)})`, a.text + (a.submit ? '\n\n(и нажать Enter)' : '')))) return DENIED
+  return firefox.type(tabArg(a), Number(a.index), String(a.text), !!a.submit)
+}
+
+async function firefoxOpen(ctx: ToolContext, a: { url: string; new_tab?: boolean }) {
+  const newTab = a.new_tab !== false
+  if (!(await ctx.approve(`Открыть в вашем Firefox${newTab ? ' (новая вкладка)' : ' (в активной вкладке)'}`, String(a.url)))) return DENIED
+  return firefox.open(String(a.url), newTab)
+}
+
+async function firefoxClose(ctx: ToolContext, a: { tab_id: number }) {
+  if (!(await ctx.approve(`Закрыть вкладку ${a.tab_id} в вашем Firefox`, 'Агент хочет закрыть вкладку.'))) return DENIED
+  return firefox.close(Number(a.tab_id))
+}
+
+async function firefoxBack(ctx: ToolContext, a: { tab_id?: number }) {
+  if (!(await ctx.approve(`Назад в вашем Firefox (${tabName(a)})`, 'Агент хочет вернуться на предыдущую страницу.'))) return DENIED
+  return firefox.back(tabArg(a))
+}
+
+async function firefoxScreenshot(ctx: ToolContext, a: { tab_id?: number }) {
+  const file = await firefox.screenshot(tabArg(a))
+  ctx.attachImage?.(file)
+  ctx.media?.(file)
+  return `Снимок вкладки сохранён: ${file}` + (ctx.attachImage ? ' (картинка будет у тебя в следующем сообщении)' : '')
+}
+
 async function semanticSearch(ctx: ToolContext, a: { query: string; k?: number }) {
   if (!ctx.semantic) return 'Поиск по смыслу недоступен'
   return ctx.semantic(a.query, Number(a.k ?? 8))
@@ -903,6 +943,22 @@ export const TOOLS: Record<string, [ToolFn, ReturnType<typeof schema>]> = {
   browser_back: [() => browser.back(), schema('browser_back', 'Go back in browser history.', {}, [])],
   browser_screenshot: [browserScreenshot, schema('browser_screenshot', 'Take a screenshot of the visible browser page ' +
     '(you will see it if your model supports images; the user sees it too).', {}, [])],
+  firefox_tabs: [() => firefox.tabs(), schema('firefox_tabs', 'List tabs open in the USER\'S OWN Firefox (their logins, the page they ' +
+    'are looking at). Use when the user says "my browser", "this page", "the tab I have open".', {}, [])],
+  firefox_read: [(_c: ToolContext, a: { tab_id?: number }) => firefox.read(tabArg(a)), schema('firefox_read', 'Read a page in the user\'s ' +
+    'Firefox: text and numbered interactive elements. Omit tab_id for the tab the user is looking at.', { tab_id: I }, [])],
+  firefox_screenshot: [firefoxScreenshot, schema('firefox_screenshot', 'Screenshot of the visible part of a tab in the user\'s Firefox ' +
+    '(the tab becomes active). You see it if your model supports images.', { tab_id: I }, [])],
+  firefox_scroll: [(_c: ToolContext, a: { tab_id?: number; direction?: string }) => firefox.scroll(tabArg(a), a.direction === 'up' ? 'up' : 'down'),
+    schema('firefox_scroll', 'Scroll a page in the user\'s Firefox.', { tab_id: I, direction: { type: 'string', enum: ['down', 'up'] } }, [])],
+  firefox_click: [firefoxClick, schema('firefox_click', 'Click an element (number from firefox_read) in the user\'s Firefox. Needs approval.',
+    { tab_id: I, index: I, why: { ...S, description: 'Short reason, shown to the user' } }, ['index'])],
+  firefox_type: [firefoxType, schema('firefox_type', 'Type into a field (number from firefox_read) in the user\'s Firefox; submit=true presses Enter. Needs approval.',
+    { tab_id: I, index: I, text: S, submit: B }, ['index', 'text'])],
+  firefox_open: [firefoxOpen, schema('firefox_open', 'Open a URL in the user\'s Firefox (new tab by default). Needs approval.',
+    { url: S, new_tab: B }, ['url'])],
+  firefox_back: [firefoxBack, schema('firefox_back', 'Go back in a tab of the user\'s Firefox. Needs approval.', { tab_id: I }, [])],
+  firefox_close: [firefoxClose, schema('firefox_close', 'Close a tab in the user\'s Firefox. Needs approval.', { tab_id: I }, ['tab_id'])],
   semantic_search: [semanticSearch, schema('semantic_search', 'Search the project code by meaning (embeddings), e.g. ' +
     '"where payments are processed". Better than search_files when you do not know exact words. Returns file:line ranges.',
     { query: S, k: { ...I, description: 'How many results, default 8' } }, ['query'])],

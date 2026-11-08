@@ -12,6 +12,7 @@ import * as memory from './memory'
 import * as secrets from './secrets'
 import * as semantic from './semantic'
 import * as images from './images'
+import * as firefox from './firefox'
 import * as tools from './tools'
 import { explain, Venice } from './venice'
 import { SHELL_NAME } from './platform'
@@ -407,7 +408,9 @@ export class AgentRun {
     // набор инструментов: помощникам — без помощников, плана и памяти; подключения MCP — всем
     const depth = this.opts.depth || 0
     const drop = new Set([...(this.opts.memory ? [] : ['remember']), ...(depth > 0 ? ['delegate', 'remember', 'update_plan'] : [])])
-    this.schemas = tools.SCHEMAS.filter((s) => !drop.has(s.function.name))
+    // инструменты Firefox пользователя — только когда расширение подключено
+    const ff = firefox.connected()
+    this.schemas = tools.SCHEMAS.filter((s) => !drop.has(s.function.name) && (ff || !s.function.name.startsWith('firefox_')))
     if ((this.settings.mcp_servers || []).some((s) => s.enabled)) {
       this.hooks.status('Подключаю MCP…')
       const { schemas, route } = await mcp.toolSchemas(this.settings.mcp_servers)

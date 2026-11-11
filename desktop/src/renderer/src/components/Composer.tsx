@@ -2,6 +2,7 @@ import { ArrowUp, Archive, Crown, Brain, BrainOff, Check, ChevronDown, Search, S
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { imagePrice, money } from '@shared/pricing'
+import { proModel } from '@shared/runpod'
 import type { Attachment, EditModel, Mode } from '@shared/types'
 import { attachFiles, imageSize, loadEditModels, modelFor, pickAttachments, pickModel, saveSettings, send, stop, toast } from '../lib/actions'
 import { api } from '../lib/api'
@@ -9,6 +10,7 @@ import { fileUrl, humanSize } from '../lib/format'
 import { get, set, useApp } from '../lib/store'
 import { defaults, MediaOptions } from './MediaOptions'
 import { ProOptions } from './ProOptions'
+import { FaceSwapSlots } from './FaceSwap'
 import { ContextRing } from './Jobs'
 import { ModelPicker } from './ModelPicker'
 import { Popover } from './Popover'
@@ -184,6 +186,7 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
   // фото к видео: пропорции «как у фото» (или ближайшие), чтобы модели не пришлось перестраивать кадр
   const firstPhoto = attachments.find((a) => a.kind === 'image')?.path
   const photoCount = attachments.filter((a) => a.kind === 'image').length
+  const isFaceSwap = proModel(model?.id || '').kind === 'faceswap'
   const [photoRatio, setPhotoRatio] = useState(0)
   useEffect(() => {
     if (!firstPhoto) return setPhotoRatio(0)
@@ -277,7 +280,7 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
         {mode === 'pro' && (
           <motion.div key="pro" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
-            <ProOptions model={model} photos={photoCount} />
+            {isFaceSwap ? <FaceSwapSlots /> : <ProOptions model={model} photos={photoCount} />}
           </motion.div>
         )}
         {mode !== 'text' && mode !== 'pro' && (

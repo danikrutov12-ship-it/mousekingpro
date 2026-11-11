@@ -37,6 +37,8 @@ export interface State {
   keepRest: boolean     // при правке по фото: не менять остальное
   avoid: string         // при правке по фото: чего не должно быть (аналог негативного промпта)
   proNegative: string   // «Картинка Pro»: негативный промпт
+  faceBase: string | null  // фейсвап: фото-основа, куда вставляется лицо
+  faceDonor: string | null // фейсвап: фото, откуда берётся лицо
   approvals: ApprovalReq[]
   mode: Mode
   draft: string
@@ -74,6 +76,8 @@ let state: State = {
   keepRest: true,
   avoid: '',
   proNegative: '',
+  faceBase: null,
+  faceDonor: null,
   approvals: [],
   mode: 'text',
   draft: '',

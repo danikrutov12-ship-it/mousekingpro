@@ -35,6 +35,7 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
       <div className="pro-note">{m.note}</div>
       {configured && !ws && <RunpodSpendLine />}
       {m.kind === 'edit' && !photos && <div className="opt-warn">{m.name} правит фото — прикрепите от 1 до {m.maxRefs}.</div>}
+      {m.kind === 'faceswap' && <div className="opt-warn">Фото вставляются в слоты выше: 1 — основа, 2 — лицо-донор.</div>}
       {photos > m.maxRefs && <div className="opt-warn">{m.maxRefs ? `${m.name} возьмёт первые ${m.maxRefs} фото из ${photos}.` : `${m.name} рисует только по тексту — фото не учитываются. Для правки выберите Qwen Image 3 Pro Edit.`}</div>}
 
       <div className={`pro-neg ${negOk ? '' : 'off'}`}>
@@ -84,6 +85,32 @@ export function ProOptions({ model, photos }: { model: Model | null; photos: num
           <label className={`chip-toggle ${detail ? 'on' : ''}`} title="Второй лёгкий проход фотореалистичной моделью (Z-Image): возвращает поры кожи и фактуру ткани, форму и цвета не меняет. +5–10 с">
             <input type="checkbox" checked={detail} onChange={(e) => upd({ detail: e.target.checked })} /><Sparkles size={13} />Текстура
           </label>
+        )}
+        {m.kind === 'faceswap' && (
+          <>
+            <label className={`chip-toggle ${opts.restore !== false ? 'on' : ''}`}
+              title="Восстановление лица (CodeFormer): возвращает резкость и кожу после свопа. Без него лицо мягкое и мыльное">
+              <input type="checkbox" checked={opts.restore !== false} onChange={(e) => upd({ restore: e.target.checked })} /><ShieldCheck size={13} />Восстановление лица
+            </label>
+            {opts.restore !== false && (
+              <label className="ed-slider pro-strength" title="Сила восстановления: меньше — больше похожести на донора, больше — чище кожа, но «пластик»">
+                <span>Похожесть ↔ кожа</span>
+                <input type="range" className="range" min={0.3} max={1} step={0.05} value={opts.restoreWeight ?? 0.5}
+                  onChange={(e) => upd({ restoreWeight: Number(e.target.value) })} />
+                <em>{Math.round((opts.restoreWeight ?? 0.5) * 100)}%</em>
+              </label>
+            )}
+            <label className={`chip-toggle ${opts.allFaces ? 'on' : ''}`} title="Менять все лица в кадре, а не только самое крупное">
+              <input type="checkbox" checked={!!opts.allFaces} onChange={(e) => upd({ allFaces: e.target.checked })} />Все лица
+            </label>
+            {!opts.allFaces && (
+              <label className="pro-neg" title="Какое лицо менять: 0 — самое крупное в кадре, 1 — второе по размеру и так далее">
+                <span style={{ fontSize: 12, color: 'var(--muted)', padding: '0 4px' }}>Лицо №</span>
+                <input type="number" min={0} max={5} value={opts.faceIndex ?? 0} style={{ width: 60 }}
+                  onChange={(e) => upd({ faceIndex: Math.max(0, Number(e.target.value) || 0) })} />
+              </label>
+            )}
+          </>
         )}
         {m.quality && (
           <label className={`chip-toggle ${opts.maxq ? 'on' : ''}`} title="Полная версия модели (bf16, 41 ГБ) вместо сжатой: точнее мелкие детали. Идёт на видеокартах 96 ГБ (RTX PRO 6000) — секунда примерно в 2.5 раза дороже, первый запуск дольше">

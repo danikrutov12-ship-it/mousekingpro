@@ -12,7 +12,7 @@ export interface Settings {
   pro_model: string
   runpod_endpoint: string
   /** последние настройки «Картинки Pro» */
-  pro_opts?: { keep?: boolean; hires?: boolean; detail?: boolean; maxq?: boolean; fast?: boolean; strength?: number; upscale?: boolean; aspect?: string; loras?: { name: string; weight: number }[] }
+  pro_opts?: { keep?: boolean; hires?: boolean; detail?: boolean; maxq?: boolean; fast?: boolean; strength?: number; upscale?: boolean; aspect?: string; loras?: { name: string; weight: number }[]; restore?: boolean; restoreWeight?: number; faceIndex?: number; allFaces?: boolean; swapModel?: string }
   temperature: number
   max_steps: number
   tool_mode: 'auto' | 'native' | 'text'

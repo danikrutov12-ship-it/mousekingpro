@@ -155,6 +155,7 @@ export async function generate(
     cfg = { ...cfg, endpoint: hq }
   }
   if (m.kind === 'edit' && !photos.length) throw new Error(`${m.name} правит фото — прикрепите хотя бы одно`)
+  if (m.kind === 'faceswap' && photos.length < 2) throw new Error('Для фейсвапа нужно два фото: 1 — куда вставлять лицо, 2 — откуда его взять')
   const names = photos.slice(0, m.maxRefs).map((_, i) => `ref_${i + 1}.jpg`)
   const workflow = buildWorkflow(p, names)
   const images = photos.slice(0, m.maxRefs).map((path, i) => ({ name: names[i], image: prepImage(path) }))

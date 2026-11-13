@@ -1,14 +1,13 @@
 // «Картинка Pro»: модели на своём RunPod Serverless (ComfyUI). Каталог общий для интерфейса и основного процесса.
 
-export type ProFamily = 'qwen-edit' | 'qwen-rapid' | 'kontext' | 'qwen-image' | 'chroma' | 'zimage' | 'sdxl' | 'qwen3-pro' | 'faceswap'
+export type ProFamily = 'qwen-edit' | 'qwen-rapid' | 'kontext' | 'qwen-image' | 'chroma' | 'zimage' | 'sdxl' | 'qwen3-pro'
 
 export interface ProModel {
   id: string
   name: string
   family: ProFamily
-  /** edit — инструкция по фото (фото обязательно); gen — по тексту, фото по желанию как основа (img2img);
-   *  faceswap — подмена лица: фото 1 — основа, фото 2 — откуда берётся лицо */
-  kind: 'edit' | 'gen' | 'faceswap'
+  /** edit — инструкция по фото (фото обязательно); gen — по тексту, фото по желанию как основа (img2img) */
+  kind: 'edit' | 'gen'
   maxRefs: number
   /** есть ли быстрый режим (Lightning / Turbo) */
   fast?: boolean
@@ -25,11 +24,6 @@ export interface ProModel {
 }
 
 export const PRO_MODELS: ProModel[] = [
-  {
-    id: 'faceswap', name: 'Фейсвап (ReActor)', family: 'faceswap', kind: 'faceswap', maxRefs: 2, quality: true,
-    negative: () => false, lora: false, file: 'inswapper_128.onnx',
-    note: 'Подмена лица: фото 1 — основа (куда вставлять), фото 2 — откуда взять лицо. Без цензуры, работает на ню. Своя модель на твоём RunPod.',
-  },
   {
     id: 'ws-qwen3-pro-edit', name: 'Qwen Image 3 Pro Edit', family: 'qwen3-pro', kind: 'edit', maxRefs: 3, provider: 'wavespeed',
     negative: () => false, lora: false, file: 'alibaba/qwen-image-3.0-pro/edit',
@@ -112,16 +106,6 @@ export interface ProParams {
   maxq?: boolean
   /** увеличить результат ×2 (4x-UltraSharp) */
   upscale?: boolean
-  /** фейсвап: восстановление лица (CodeFormer/GFPGAN) — возвращает резкость и кожу */
-  restore?: boolean
-  /** фейсвап: сила восстановления 0.3–1 (ниже — больше похожести на донора, выше — чище кожа) */
-  restoreWeight?: number
-  /** фейсвап: какое лицо менять на основе (0 — самое крупное в кадре) */
-  faceIndex?: number
-  /** фейсвап: менять все лица в кадре */
-  allFaces?: boolean
-  /** фейсвап: модель свопа (inswapper_128 / hyperswap_256) */
-  swapModel?: string
 }
 
 /** Что скачать на сетевой диск: [папка в models/, имя файла, ссылка]. Папки — как в worker-comfyui (unet, clip), а не diffusion_models/text_encoders. */
@@ -143,7 +127,4 @@ export const MODEL_FILES: [string, string, string][] = [
   ['unet', 'qwen_image_edit_2511_bf16.safetensors', 'https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors'],
   ['upscale_models', '4x-UltraSharp.safetensors', 'https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.safetensors'],
   ['checkpoints', 'Qwen-Rapid-v23.safetensors', 'https://huggingface.co/Phr00t/Qwen-Image-Edit-Rapid-AIO/resolve/main/v23/Qwen-Rapid-AIO-NSFW-v23.safetensors'],
-  ['insightface', 'inswapper_128.onnx', 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/inswapper_128.onnx'],
-  ['facerestore_models', 'codeformer-v0.1.0.pth', 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/facerestore_models/codeformer-v0.1.0.pth'],
-  ['facerestore_models', 'GFPGANv1.4.pth', 'https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/facerestore_models/GFPGANv1.4.pth'],
 ]

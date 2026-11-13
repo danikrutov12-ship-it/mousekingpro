@@ -166,24 +166,6 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
       return false
     }
     const m = proModel(model.id)
-    if (m.kind === 'faceswap') {
-      const base = get().faceBase
-      const donor = get().faceDonor
-      if (!base || !donor) {
-        toast('Для фейсвапа нужны оба фото: основа и лицо-донор', 'error')
-        return false
-      }
-      const o = s.pro_opts || {}
-      // порядок важен: первым идёт основа, вторым — донор лица
-      const atts: Attachment[] = [base, donor].map((p) => ({ kind: 'image' as const, name: p.split('/').pop() || 'фото', path: p }))
-      attachments = atts
-      extra = { ...extra, pro: {
-        model: m.id, prompt: text, upscale: o.upscale, detail: o.detail ?? true,
-        restore: o.restore !== false, restoreWeight: o.restoreWeight ?? 0.5,
-        faceIndex: o.faceIndex ?? 0, allFaces: !!o.allFaces, swapModel: o.swapModel,
-      } }
-      params = undefined
-    } else {
     const photos = attachments.filter((a) => a.kind === 'image').length
     if (m.kind === 'edit' && !photos) {
       toast(`${m.name} правит фото — прикрепите хотя бы одно`, 'error')
@@ -204,7 +186,6 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
       maxq: !!m.quality && o.maxq, keep: m.kind === 'edit' ? o.keep !== false : undefined, loras: (o.loras || []).filter((l) => l.name && m.lora),
     } }
     params = undefined
-    }
   }
   if (mode === 'image' && !text && !extra.op) {
     toast('Опишите изображение', 'error')

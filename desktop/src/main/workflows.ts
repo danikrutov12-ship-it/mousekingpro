@@ -148,33 +148,6 @@ export function buildWorkflow(p: ProParams, images: string[]): Graph {
       finish(b, add('VAEDecode', { samples: sampled, vae }), p, seed)
       break
     }
-    case 'faceswap': {
-      // ReActor: фото 1 — основа, фото 2 — донор лица. Своп → восстановление → увеличение → текстура.
-      // Промпт не нужен: ReActor работает по пикселям, а не по описанию.
-      const base = add('LoadImage', { image: images[0] })
-      const donor = add('LoadImage', { image: images[1] })
-      const restoreOn = p.restore !== false
-      const boost = add('ReActorFaceBoost', {
-        enabled: restoreOn, boost_model: 'codeformer-v0.1.0.pth', interpolation: 'Lanczos',
-        visibility: 1, codeformer_weight: p.restoreWeight ?? 0.5, restore_with_main_after: false,
-      })
-      let swapped = out(add('ReActorFaceSwap', {
-        enabled: true, input_image: base, source_image: donor,
-        swap_model: p.swapModel || 'inswapper_128.onnx', facedetection: 'retinaface_resnet50',
-        face_restore_model: restoreOn ? 'codeformer-v0.1.0.pth' : 'none',
-        face_restore_visibility: 1, codeformer_weight: p.restoreWeight ?? 0.5,
-        detect_gender_input: 'no', detect_gender_source: 'no',
-        input_faces_index: p.allFaces ? '0,1,2,3' : String(p.faceIndex ?? 0),
-        source_faces_index: '0', console_log_level: 1, face_boost: boost,
-      }), 0)
-      if (p.upscale) {
-        const up = add('ImageUpscaleWithModel', { upscale_model: add('UpscaleModelLoader', { model_name: '4x-UltraSharp.safetensors' }), image: swapped })
-        swapped = add('ImageScaleBy', { image: up, upscale_method: 'lanczos', scale_by: 0.5 })
-      }
-      if (p.detail) swapped = detailPass(b, swapped, seed)
-      b.add('SaveImage', { images: swapped, filename_prefix: 'mkp' })
-      break
-    }
     case 'qwen-image': {
       const clip = add('CLIPLoader', { clip_name: 'qwen_2.5_vl_7b_fp8_scaled.safetensors', type: 'qwen_image', device: 'default' })
       const vae = add('VAELoader', { vae_name: 'qwen_image_vae.safetensors' })

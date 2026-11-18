@@ -36,12 +36,27 @@ export const health = (cfg: RunpodCfg) => call(cfg, '/health')
 const found = new Map<string, string>()
 export async function endpointByName(key: string, name: string): Promise<string | null> {
   if (found.has(name)) return found.get(name)!
-  const r = await fetch('https://rest.runpod.io/v1/endpoints', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(20_000) })
-  if (!r.ok) return null
-  const list: { id: string; name: string }[] = await r.json().catch(() => [])
-  const id = list.find((e) => e.name === name)?.id ?? null
+  const id = (await account(key)).endpoints.find((e) => e.name === name)?.id ?? null
   if (id) found.set(name, id)
   return id
+}
+
+export interface RunpodAccount {
+  endpoints: { id: string; name: string; networkVolumeId: string | null }[]
+  networkVolumes: { id: string; name: string; dataCenterId: string }[]
+}
+
+/** Эндпоинты и сетевые диски аккаунта — через GraphQL: он надёжнее REST (rest.runpod.io бывал недоступен целиком). */
+export async function account(key: string): Promise<RunpodAccount> {
+  const r = await fetch('https://api.runpod.io/graphql', {
+    method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: 'query { myself { endpoints { id name networkVolumeId } networkVolumes { id name dataCenterId } } }' }),
+    signal: AbortSignal.timeout(20_000),
+  })
+  const d = await r.json().catch(() => null)
+  const me = d?.data?.myself
+  if (!r.ok || !me) throw new Error(r.status === 401 ? 'Ключ RunPod не подошёл' : `RunPod не ответил (${r.status})`)
+  return { endpoints: me.endpoints || [], networkVolumes: me.networkVolumes || [] }
 }
 
 /** Баланс аккаунта RunPod (GraphQL). */

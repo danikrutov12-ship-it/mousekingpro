@@ -5,26 +5,22 @@ import { randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { VSR_ENDPOINT, VSR_HQ_ENDPOINT, VSR_INLINE_MAX_BYTES, vsrMode, type VsrParams } from '@shared/vsr'
-import { call, endpointByName } from './runpod'
+import { account, call, endpointByName } from './runpod'
 import * as s3 from './s3'
 
 export interface VsrKeys { key: string; s3: { access: string; secret: string } | null }
 
-const REST = 'https://rest.runpod.io/v1'
 const volumes = new Map<string, { id: string; dc: string }>()
 
 /** Сетевой диск эндпоинта и его датацентр — для адреса S3. */
 async function volumeOf(key: string, endpoint: string) {
   if (volumes.has(endpoint)) return volumes.get(endpoint)!
-  const get = async (p: string) => {
-    const r = await fetch(`${REST}${p}`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(20_000) })
-    if (!r.ok) throw new Error(`RunPod ${r.status}`)
-    return r.json()
-  }
-  const ep = await get(`/endpoints/${endpoint}`)
-  if (!ep.networkVolumeId) throw new Error('У эндпоинта VSR нет сетевого диска')
-  const vol = await get(`/networkvolumes/${ep.networkVolumeId}`)
-  const v = { id: ep.networkVolumeId as string, dc: vol.dataCenterId as string }
+  const acc = await account(key)
+  const volId = acc.endpoints.find((e) => e.id === endpoint)?.networkVolumeId
+  if (!volId) throw new Error('У эндпоинта VSR нет сетевого диска')
+  const vol = acc.networkVolumes.find((n) => n.id === volId)
+  if (!vol) throw new Error('Сетевой диск эндпоинта VSR не найден в аккаунте RunPod')
+  const v = { id: volId, dc: vol.dataCenterId }
   volumes.set(endpoint, v)
   return v
 }

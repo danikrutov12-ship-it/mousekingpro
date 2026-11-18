@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-sys.path.append('/runpod-volume/vsr/pylib')  # пакет runpod; пакеты образа важнее
+sys.path += ['/runpod-volume/vsr/pylib', '/tmp/pylib']  # пакет runpod (см. start.sh); пакеты образа важнее
 import runpod  # noqa: E402
 
 JOBS = '/runpod-volume/vsr/jobs'

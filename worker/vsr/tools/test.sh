@@ -12,7 +12,7 @@ NAME=${4:-mouse-king-vsr}
 OUT=${5:-./vsr-out.mp4}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-E=$(curl -s -H "Authorization: Bearer $K" https://rest.runpod.io/v1/endpoints | python3 -c "import json,sys;print([e['id'] for e in json.load(sys.stdin) if e['name']=='$NAME'][0])")
+E=$(curl -s https://api.runpod.io/graphql -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d '{"query":"query { myself { endpoints { id name } } }"}' | python3 -c "import json,sys;print([e['id'] for e in json.load(sys.stdin)['data']['myself']['endpoints'] if e['name']=='$NAME'][0])")
 python3 -c "
 import json,base64,sys
 b=base64.b64encode(open(sys.argv[1],'rb').read()).decode()

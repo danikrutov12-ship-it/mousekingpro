@@ -18,8 +18,8 @@
 |---|---|---|---|
 | `mouse-king-pro` | `runpod/worker-comfyui:5.10.0-base` (шаблон `mouse-king-pro-comfyui`) | 5090 → 4090 → L40S → 6000 Ada → PRO 6000 (по цене) | все модели «Картинки Pro» |
 | `mouse-king-pro-hq` | тот же шаблон | 48 ГБ+ | «Макс. качество»: Qwen Edit 2511 в bf16 (41 ГБ) |
-| `mouse-king-vsr` | `eritpchy/video-subtitle-remover:1.4.0-cuda12.8` (шаблон `mkp-vsr`) | 24–48 ГБ | «Убрать текст с видео», ветка `vsr` (сейчас `workersMax = 0`, см. STATUS.md) |
-| `mouse-king-vsr-hq` | тот же | 48 ГБ+ | ProPainter (сейчас `workersMax = 0`) |
+| `mouse-king-vsr` | `eritpchy/video-subtitle-remover:1.4.0-cuda12.8` (шаблон `mkp-vsr`) | 24–48 ГБ | «Убрать текст с видео», все алгоритмы (ветка `vsr`) |
+| `mouse-king-vsr-hq` | тот же | 48 ГБ+ | не используется, на паузе (`workersMax 0`) — см. STATUS.md |
 
 ### Настройки, при которых не платим лишнего
 
@@ -150,4 +150,7 @@ worker-comfyui 5.10.0 ищет модели в `/runpod-volume/models/{checkpoin
     `runpod.serverless.progress_update`, а задачи старше суток удаляет;
   - если обработчик упал, `diag.py` на чистой стандартной библиотеке берёт задачу и возвращает лог запуска как ошибку.
 - **Тест без программы:** `worker/vsr/tools/test.sh видео.mp4 sttn-auto '[[x0,y0,x1,y1]]'`.
-- **Текущая проблема** (подробно в STATUS.md): воркеры с этим образом гаснут через несколько секунд и не берут задачу.
+- VSR 1.4.0 пишет MPEG-4 Part 2, его не играет Chromium — `handler.py` перекодирует результат в H.264 встроенным
+  ffmpeg VSR (`/vsr/backend/ffmpeg/linux_x64/ffmpeg`, есть libx264), звук копируется.
+- Пакет `runpod` нельзя ставить на сетевой диск при старте воркера — см. «Почему воркер раньше не работал» в STATUS.md.
+- **REST `rest.runpod.io` бывает недоступен** — для поиска эндпоинтов/дисков и управления используйте GraphQL `https://api.runpod.io/graphql`.

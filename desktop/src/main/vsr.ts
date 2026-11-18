@@ -4,7 +4,7 @@
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
-import { VSR_ENDPOINT, VSR_HQ_ENDPOINT, VSR_INLINE_MAX_BYTES, vsrMode, type VsrParams } from '@shared/vsr'
+import { VSR_ENDPOINT, VSR_INLINE_MAX_BYTES, vsrMode, type VsrParams } from '@shared/vsr'
 import { account, call, endpointByName } from './runpod'
 import * as s3 from './s3'
 
@@ -30,7 +30,7 @@ export interface VsrResult { path: string; seconds: number; cold: boolean; mode:
 export async function run(keys: VsrKeys, p: VsrParams, video: string, outDir: string,
   status: (s: string) => void, stopped: () => boolean): Promise<VsrResult> {
   const mode = vsrMode(p.mode)
-  const name = mode.hq ? VSR_HQ_ENDPOINT : VSR_ENDPOINT
+  const name = VSR_ENDPOINT
   const endpoint = await endpointByName(keys.key, name).catch(() => null)
   if (!endpoint) throw new Error(`В аккаунте RunPod нет эндпоинта ${name} — без него удаление текста не работает`)
   const cfg = { key: keys.key, endpoint }

@@ -3,19 +3,17 @@ import type { Model } from './types'
 
 export const VSR_MODEL_ID = 'vsr-remove-text'
 export const VSR_ENDPOINT = 'mouse-king-vsr'
-/** ProPainter — на эндпоинте с видеокартами 48 ГБ+ */
-export const VSR_HQ_ENDPOINT = 'mouse-king-vsr-hq'
 export const VSR_MAX_SECONDS = 600
 /** Без S3-ключа видео идёт прямо в запросе — RunPod принимает до 10 МБ, base64 раздувает на треть */
 export const VSR_INLINE_MAX_BYTES = 7 * 1024 * 1024
 
 export type VsrMode = 'sttn-auto' | 'sttn-det' | 'lama' | 'propainter'
 
-export const VSR_MODES: { id: VsrMode; name: string; note: string; hq?: boolean }[] = [
+export const VSR_MODES: { id: VsrMode; name: string; note: string }[] = [
   { id: 'sttn-auto', name: 'STTN — быстро', note: 'Стирает всё внутри рамки на каждом кадре. Лучше всего для обычного видео и постоянных надписей (логотип, субтитры в одной полосе).' },
   { id: 'sttn-det', name: 'STTN + поиск текста', note: 'Сначала находит текст внутри рамки (или по всему кадру) и стирает только его — фон вокруг остаётся нетронутым.' },
   { id: 'lama', name: 'LAMA — мультфильмы', note: 'Для мультфильмов, аниме и графики. Ищет текст сам, стирает аккуратно, скорость средняя.' },
-  { id: 'propainter', name: 'ProPainter — макс. качество', note: 'Чище всего при сильном движении в кадре. Медленный и дороже в 3–5 раз: работает на видеокартах 48 ГБ.', hq: true },
+  { id: 'propainter', name: 'ProPainter — макс. качество', note: 'Чище всего при сильном движении в кадре. Медленнее остальных примерно в 3 раза и во столько же дороже.' },
 ]
 
 export const vsrMode = (id: string | undefined) => VSR_MODES.find((m) => m.id === id) || VSR_MODES[0]

@@ -57,24 +57,38 @@ def set_config(mode, w, h):
         cfg = {}
     if mode == 'propainter':
         mp = w * h / 1e6
-        # 0.44 ГБ на кадр-мегапиксель в fp32 (в fp16 было 0.22 — см. propainter_fp32)
-        n = int((gpu_gb() * 0.85 - 9) / (0.44 * max(mp, 0.3)))
+        n = int((gpu_gb() * 0.85 - 9) / (0.22 * max(mp, 0.3)))
         cfg.setdefault('ProPainter', {})['MaxLoadNum'] = max(8, min(70, n))
     json.dump(cfg, open(path, 'w'))
 
 
-def propainter_fp32():
-    """ProPainter в VSR считает в fp16; на части видео значения переполняются, и вместо текста получается
-    чёрный прямоугольник (NaN → 0). Переключаем на fp32 правкой файла в контейнере (в образе он свой у каждого воркера)."""
-    p = os.path.join(VSR, 'backend', 'inpaint', 'propainter_inpaint.py')
-    try:
-        s = open(p, encoding='utf-8').read()
-    except OSError:
-        return 'файл ProPainter не найден'
-    if 'use_fp16=True' not in s:
-        return 'fp16 уже выключен' if 'use_fp16=False' in s else 'use_fp16 не найден — правка не применена'
-    open(p, 'w', encoding='utf-8').write(s.replace('use_fp16=True', 'use_fp16=False'))
-    return 'ProPainter переключён на fp32'
+# Полоса вокруг надписи, внутри которой VSR закрашивает (STTN, LAMA, ProPainter): в VSR её высота = ширина × 3/16.
+# Это рассчитано на горизонтальное видео с субтитрами внизу. У вертикального 576×1024 полоса 108 px при подписи
+# в 100 px — фона вокруг почти нет: ProPainter даёт чёрный прямоугольник, STTN — белое пятно.
+# Берём большее из «ширина × 3/16» и «высота / 4»: горизонтальные видео не меняются, вертикальные получают фон.
+BAND_OLD = 'split_h = int(W_ori * 3 / 16)'
+BAND_NEW = 'split_h = int(max(W_ori * 3 / 16, H_ori / 4))  # mkp: вертикальные видео'
+BAND_FILES = ('sttn_auto_inpaint.py', 'lama_inpaint.py', 'propainter_inpaint.py')
+
+
+def patch_vsr():
+    """Правка файлов VSR в контейнере (у каждого воркера своя копия образа). Возвращает отчёт для лога."""
+    done = []
+    for name in BAND_FILES:
+        p = os.path.join(VSR, 'backend', 'inpaint', name)
+        try:
+            s = open(p, encoding='utf-8').read()
+        except OSError:
+            done.append(f'{name}: нет файла')
+            continue
+        if BAND_NEW in s:
+            done.append(f'{name}: уже')
+        elif BAND_OLD in s:
+            open(p, 'w', encoding='utf-8').write(s.replace(BAND_OLD, BAND_NEW))
+            done.append(f'{name}: исправлено')
+        else:
+            done.append(f'{name}: строка не найдена')
+    return 'полоса закраски: ' + ', '.join(done)
 
 
 def to_h264(src, dst):
@@ -143,9 +157,8 @@ def handle(job, runpod):
     if not areas and mode == 'sttn-auto':
         mode = 'sttn-det'  # без рамки STTN стёр бы весь кадр — ищем текст детектором
     set_config(mode, w, h)
-    patch = propainter_fp32() if mode == 'propainter' else ''
-    if patch:
-        print(patch)
+    patch = patch_vsr()
+    print(patch)
     cmd = [sys.executable, '-u', 'backend/main.py', '-i', src, '-o', raw, '--inpaint-mode', mode]
     for a in areas:
         cmd += ['-c', *map(str, a)]

@@ -8,6 +8,7 @@ import { ApprovalSheet, Lightbox, Palette, SettingsDialog, Toasts } from './comp
 import { CompareDialog } from './components/Compare'
 import { ProjectPage, ProjectsPage } from './components/Projects'
 import { GalleryPage, ViewerHost } from './components/Gallery'
+import { LoraPage } from './components/LoraPage'
 import { SidePanel } from './components/SidePanel'
 import { Sidebar } from './components/Sidebar'
 
@@ -42,7 +43,8 @@ export function App() {
   }, [])
 
   // перетаскивание файлов в окно — прикрепить к сообщению
-  const hasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes('Files')
+  // на странице «Обучение LoRA» файлы принимает сама страница (в набор, а не в чат)
+  const hasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes('Files') && get().view.page !== 'lora'
   const onDragEnter = (e: React.DragEvent) => {
     if (!hasFiles(e)) return
     depth.current++
@@ -54,6 +56,7 @@ export function App() {
     if (!depth.current) setDragging(false)
   }
   const onDrop = (e: React.DragEvent) => {
+    if (!hasFiles(e)) return
     e.preventDefault()
     depth.current = 0
     setDragging(false)
@@ -79,6 +82,7 @@ export function App() {
             {view.page === 'chat' && <ChatPage />}
             {view.page === 'projects' && <ProjectsPage />}
             {view.page === 'gallery' && <GalleryPage />}
+            {view.page === 'lora' && <LoraPage />}
             {view.page === 'project' && <ProjectPage projectId={view.projectId} />}
           </motion.div>
         </AnimatePresence>

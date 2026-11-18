@@ -81,6 +81,11 @@ const api: Api = {
   },
   fs: { tree: call('fs:tree'), write: call('fs:write') } as Api['fs'],
   compare: call('compare') as Api['compare'],
+  lora: {
+    list: call('lora:list'), get: call('lora:get'), create: call('lora:create'), update: call('lora:update'), remove: call('lora:remove'),
+    pick: call('lora:pick'), addFiles: call('lora:addFiles'), addData: call('lora:addData'), importFolder: call('lora:importFolder'),
+    items: call('lora:items'), removeItems: call('lora:removeItems'), open: call('lora:open'), readVideo: call('lora:readVideo'),
+  } as Api['lora'],
   gallery: {
     list: call('gallery:list'), update: call('gallery:update'), remove: call('gallery:remove'), op: call('gallery:op'),
     describe: call('gallery:describe'), enhance: call('gallery:enhance'), saveImage: call('gallery:saveImage'),

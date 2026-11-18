@@ -1,4 +1,4 @@
-import { Crown, FolderKanban, Images, MoreHorizontal, PanelLeftClose, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react'
+import { Brain, Crown, FolderKanban, Images, MoreHorizontal, PanelLeftClose, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import { money } from '@shared/pricing'
@@ -101,6 +101,9 @@ export function Sidebar() {
         </button>
         <button className={`nav-btn ${view.page === 'gallery' ? 'active' : ''}`} onClick={() => set({ view: { page: 'gallery' } })}>
           <span className="nav-icon"><Images size={17} /></span><span>Галерея</span>
+        </button>
+        <button className={`nav-btn ${view.page === 'lora' ? 'active' : ''}`} onClick={() => set({ view: { page: 'lora' } })}>
+          <span className="nav-icon"><Brain size={17} /></span><span>Обучение LoRA</span>
         </button>
         <div className="section-label">Недавние</div>
         <div className="recents">

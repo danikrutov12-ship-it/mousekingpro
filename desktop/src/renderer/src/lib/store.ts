@@ -10,7 +10,7 @@ export type Panel = { tab: PanelTab; artifact?: Artifact; file?: string } | null
 
 export interface Run { text: string; status: string; outputs: Record<string, string> }
 
-export type View = { page: 'chat' } | { page: 'projects' } | { page: 'gallery' } | { page: 'project'; projectId: string }
+export type View = { page: 'chat' } | { page: 'projects' } | { page: 'gallery' } | { page: 'lora' } | { page: 'project'; projectId: string }
 
 export interface ApprovalReq { id: string; chatId: string; title: string; details: string; danger?: string }
 export interface Toast { id: number; text: string; kind?: 'error' | 'ok' }

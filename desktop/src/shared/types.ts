@@ -394,6 +394,22 @@ export interface Api {
   }
   fs: { tree(dir: string): Promise<{ name: string; path: string; dir: boolean }[]>; write(path: string, text: string): Promise<void> }
   compare(text: string, models: string[]): Promise<CompareResult[]>
+  lora: {
+    list(): Promise<import('./lora').LoraSummary[]>
+    /** проект и папка его картинок (путь картинки = dir + '/' + item.file) */
+    get(id: string): Promise<{ project: import('./lora').LoraProject; dir: string }>
+    create(name: string, kind: import('./lora').LoraKind, trigger: string): Promise<import('./lora').LoraProject>
+    update(id: string, patch: Partial<Pick<import('./lora').LoraProject, 'name' | 'kind' | 'trigger' | 'notes' | 'consent'>>): Promise<import('./lora').LoraProject>
+    remove(id: string): Promise<void>
+    pick(what: 'images' | 'folder' | 'videos'): Promise<string[]>
+    addFiles(id: string, paths: string[], stage: import('./lora').LoraStage, source?: import('./lora').LoraSource): Promise<{ added: number; skipped: string[] }>
+    addData(id: string, files: { data: Uint8Array; origin?: string }[], stage: import('./lora').LoraStage, source: import('./lora').LoraSource): Promise<{ added: number }>
+    importFolder(id: string, dir: string): Promise<{ added: number; videos: string[]; notes: number }>
+    items(id: string, ids: string[], patch: Partial<Pick<import('./lora').LoraItem, 'stage' | 'excluded' | 'caption'>>): Promise<import('./lora').LoraProject>
+    removeItems(id: string, ids: string[]): Promise<import('./lora').LoraProject>
+    open(id: string): Promise<string>
+    readVideo(path: string): Promise<Uint8Array>
+  }
   gallery: {
     list(): Promise<GalleryItem[]>
     update(id: string, patch: Partial<GalleryItem>): Promise<void>

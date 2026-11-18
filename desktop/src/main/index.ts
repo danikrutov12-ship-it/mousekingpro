@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createTwoFilesPatch } from 'diff'
 import { homedir, tmpdir, userInfo } from 'node:os'
-import { basename, dirname, join, relative, resolve } from 'node:path'
+import { basename, dirname, extname, join, relative, resolve } from 'node:path'
 import { imagePrice } from '@shared/pricing'
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, nativeTheme, Notification, session, shell } from 'electron'
 import type { ApprovalAnswer, Attachment, BatchOp, Chat, McpServer, MediaOp, Message, Mode, Model, Project, RunEvent, Schedule, SendRequest, Server, Settings } from '@shared/types'
@@ -35,6 +35,7 @@ import { isWavespeed, PRO_MODELS, proModel } from '@shared/runpod'
 import * as runpod from './runpod'
 import * as wavespeed from './wavespeed'
 import * as vsr from './vsr'
+import * as lora from './lora'
 import { isVsr, VSR_MODEL_ID, vsrMode, vsrModel } from '@shared/vsr'
 import { setServerSecrets, sshAuth } from './tools'
 import { explain, Venice } from './venice'
@@ -902,6 +903,32 @@ function handlers() {
     secrets.set('app:runpod', key.trim())
   })
   h('runpod:removeKey', () => secrets.remove('app:runpod'))
+  // ---------------------------------------------------------------- обучение LoRA
+  h('lora:list', () => lora.list())
+  h('lora:get', (_e, id: string) => ({ project: lora.get(id), dir: lora.imagesDir(id) }))
+  h('lora:create', (_e, name: string, kind, trigger: string) => lora.create(name, kind, trigger))
+  h('lora:update', (_e, id: string, patch) => lora.update(id, patch))
+  h('lora:remove', (_e, id: string) => lora.remove(id))
+  h('lora:pick', async (_e, what: 'images' | 'folder' | 'videos') => {
+    const r = await dialog.showOpenDialog(win!, what === 'folder'
+      ? { title: 'Папка с готовым набором', properties: ['openDirectory'] }
+      : what === 'videos'
+        ? { title: 'Видео для кадров', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Видео', extensions: ['mp4', 'mov', 'webm', 'mkv', 'm4v'] }] }
+        : { title: 'Фото для набора', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Картинки', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'] }] })
+    return r.canceled ? [] : r.filePaths
+  })
+  h('lora:addFiles', (_e, id: string, paths: string[], stage, source) => lora.addFiles(id, paths, stage, source))
+  h('lora:addData', (_e, id: string, files, stage, source) => lora.addData(id, files, stage, source))
+  h('lora:importFolder', (_e, id: string, dir: string) => lora.importFolder(id, dir))
+  h('lora:items', (_e, id: string, ids: string[], patch) => lora.updateItems(id, ids, patch))
+  h('lora:removeItems', (_e, id: string, ids: string[]) => lora.removeItems(id, ids))
+  h('lora:open', (_e, id: string) => shell.openPath(lora.folderOf(id)))
+  /** байты видео для отбора кадров: в интерфейсе оно открывается как blob — так canvas может читать пиксели */
+  h('lora:readVideo', (_e, path: string) => {
+    if (!lora.VIDEO_EXT.has(extname(path).toLowerCase())) throw new Error('Это не видео')
+    if (statSync(path).size > 1024 ** 3) throw new Error('Видео больше 1 ГБ — обрежьте его')
+    return new Uint8Array(readFileSync(path))
+  })
   h('runpod:s3', () => {
     const v = secrets.get('app:runpod-s3')
     return v ? { access: JSON.parse(v).access as string } : null

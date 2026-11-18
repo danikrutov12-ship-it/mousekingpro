@@ -23,7 +23,7 @@ desktop/src/
    - `image` / `video` → `runMedia` (Venice: `main/images.ts`, `generateMedia` в `agent.ts`);
      действия над готовой картинкой (`MediaOp`: увеличить, убрать фон, правка, объединение) → `runOp`;
    - `pro` → `runPro` → RunPod (`main/runpod.ts`) или WaveSpeed (`main/wavespeed.ts`), см. RUNPOD.md;
-   - (ветка `vsr`) `video` + модель `vsr-remove-text` → `runVsr` (`main/vsr.ts`).
+   - `video` + модель `vsr-remove-text` → `runVsr` (`main/vsr.ts`), «Убрать текст с видео» на своём RunPod.
 3. Ход работы уходит в интерфейс событиями `run:event` (`RunEvent`: start, delta, message, status, output,
    approval, done). Сообщения сохраняются в JSON чата (`main/store.ts`).
 4. Остановка — `run:stop` → функция `stop` из карты `active` (по id чата).
@@ -69,11 +69,11 @@ desktop/src/
 | `updater.ts` | автообновление из GitHub-релизов |
 | `install.ts` | пункт в меню приложений Linux |
 | `platform.ts` | различия Windows/Linux |
-| `runpod.ts` | клиент RunPod Serverless, генерация «Картинки Pro», `keepSource` |
+| `runpod.ts` | клиент RunPod Serverless, генерация «Картинки Pro», `keepSource`, `account()` — эндпоинты и диски через GraphQL |
 | `workflows.ts` | графы ComfyUI (формат API) для каждой модели; без Electron — проверяется обычным Node |
 | `blend.ts` | «Сохранять исходник»: совмещение генерации с исходным фото, перенос только изменённого |
 | `wavespeed.ts` | Qwen Image 3 Pro / Pro Edit через WaveSpeedAI |
-| `s3.ts`, `vsr.ts` | (ветка `vsr`) S3 RunPod с подписью SigV4; «Убрать текст с видео» |
+| `s3.ts`, `vsr.ts` | S3 RunPod с подписью SigV4; «Убрать текст с видео» |
 
 ## Интерфейс (`desktop/src/renderer/src`)
 

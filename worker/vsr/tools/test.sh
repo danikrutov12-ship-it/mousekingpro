@@ -17,7 +17,12 @@ python3 -c "
 import json,base64,sys
 b=base64.b64encode(open(sys.argv[1],'rb').read()).decode()
 json.dump({'input':{'video_b64':b,'ext':sys.argv[1].rsplit('.',1)[1],'mode':sys.argv[2],'areas':json.loads(sys.argv[3])}},open('$TMP/job.json','w'))" "$VIDEO" "$MODE" "$AREAS"
-J=$(curl -s -X POST -H "Authorization: Bearer $K" -H 'Content-Type: application/json' "https://api.runpod.ai/v2/$E/run" -d @"$TMP/job.json" | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
+for try in 1 2 3; do
+  R=$(curl -s -X POST -H "Authorization: Bearer $K" -H 'Content-Type: application/json' "https://api.runpod.ai/v2/$E/run" -d @"$TMP/job.json")
+  J=$(echo "$R" | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])" 2>/dev/null) && break
+  echo "запуск не принят (попытка $try): ${R:0:300}"; sleep 5
+done
+[ -n "${J:-}" ] || { echo "задача не создана"; exit 1; }
 echo "задача $J на $NAME"
 T0=$(date +%s)
 while :; do

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Выкладка worker/vsr/{handler.py,start.sh,diag.py} на сетевой диск RunPod через временный CPU-под.
-# Файлы под берёт с GitHub (ветка из аргумента, по умолчанию vsr) — сначала сделайте push.
+# Файлы под берёт с GitHub (ветка из аргумента, по умолчанию main) — сначала сделайте push.
 # Нужен ключ API RunPod в ~/.runpod-key. Работает через GraphQL (REST rest.runpod.io бывает недоступен).
 set -euo pipefail
 K=$(cat ~/.runpod-key)
-BRANCH=${1:-vsr}
+BRANCH=${1:-main}
 gql() { curl -s https://api.runpod.io/graphql -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d "$1"; }
 read -r VOL_ID DC < <(gql '{"query":"query { myself { networkVolumes { id name dataCenterId } } }"}' | python3 -c "import json,sys;v=[x for x in json.load(sys.stdin)['data']['myself']['networkVolumes'] if x['name']=='mouse-king-pro-models'][0];print(v['id'],v['dataCenterId'])")
 # по точному коммиту, а не по имени ветки: raw.githubusercontent.com кэширует ветки на несколько минут

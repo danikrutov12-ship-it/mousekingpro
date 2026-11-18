@@ -18,7 +18,7 @@
 |---|---|---|---|
 | `mouse-king-pro` | `runpod/worker-comfyui:5.10.0-base` (шаблон `mouse-king-pro-comfyui`) | 5090 → 4090 → L40S → 6000 Ada → PRO 6000 (по цене) | все модели «Картинки Pro» |
 | `mouse-king-pro-hq` | тот же шаблон | 48 ГБ+ | «Макс. качество»: Qwen Edit 2511 в bf16 (41 ГБ) |
-| `mouse-king-vsr` | `eritpchy/video-subtitle-remover:1.4.0-cuda12.8` (шаблон `mkp-vsr`) | 24–48 ГБ | «Убрать текст с видео», все алгоритмы (ветка `vsr`) |
+| `mouse-king-vsr` | `eritpchy/video-subtitle-remover:1.4.0-cuda12.8` (шаблон `mkp-vsr`) | 24–48 ГБ | «Убрать текст с видео», все алгоритмы |
 | `mouse-king-vsr-hq` | тот же | 48 ГБ+ | не используется, на паузе (`workersMax 0`) — см. STATUS.md |
 
 ### Настройки, при которых не платим лишнего
@@ -116,15 +116,15 @@ worker-comfyui 5.10.0 ищет модели в `/runpod-volume/models/{checkpoin
 
 - **Временный CPU-под** (около $0.06/ч) с этим диском, которому в `dockerStartCmd` передаётся команда
   (скачать, переложить, записать). Под удаляется сразу после работы. Готовый пример — `worker/vsr/tools/deploy.sh`
-  в ветке `vsr` (берёт файлы с GitHub по номеру коммита — сначала push).
+  (берёт файлы с GitHub по номеру коммита — сначала push; ветка — аргументом, по умолчанию `main`).
   - Создание пода: `POST https://rest.runpod.io/v1/pods` с `computeType: "CPU"`, `networkVolumeId`, `dataCenterIds: ["EU-RO-1"]`.
   - Время работы пода: GraphQL `pod { runtime { uptimeInSeconds } }`.
   - Логи пода через API недоступны, HTTP-прокси CPU-пода отвечал 403.
 - **S3 RunPod**: `https://s3api-eu-ro-1.runpod.io`, регион `eu-ro-1`, бакет — ID сетевого диска.
   Ключ создаётся в runpod.io → Settings → S3 API Keys. Access key выглядит как `user_…`, secret — как `rps_…`.
-  Клиент без AWS SDK — `main/s3.ts` в ветке `vsr`.
+  Клиент без AWS SDK — `main/s3.ts`.
 
-## «Убрать текст с видео» (VSR) — ветка `vsr`, в работе
+## «Убрать текст с видео» (VSR) — с версии 2.2.0
 
 - **Инструмент:** [video-subtitle-remover](https://github.com/YaoFANGUK/video-subtitle-remover), лицензия Apache-2.0.
   Запуск из командной строки: `python backend/main.py -i IN -o OUT -c YMIN YMAX XMIN XMAX --inpaint-mode MODE`.

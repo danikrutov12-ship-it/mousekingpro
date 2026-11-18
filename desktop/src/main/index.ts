@@ -34,6 +34,8 @@ import { isReferenceModel, MAX_REFERENCE_IMAGES } from '@shared/video'
 import { isWavespeed, PRO_MODELS, proModel } from '@shared/runpod'
 import * as runpod from './runpod'
 import * as wavespeed from './wavespeed'
+import * as vsr from './vsr'
+import { isVsr, VSR_MODEL_ID, vsrMode, vsrModel } from '@shared/vsr'
 import { setServerSecrets, sshAuth } from './tools'
 import { explain, Venice } from './venice'
 
@@ -399,6 +401,7 @@ async function runMedia(req: SendRequest, settings: Settings, project: Project, 
   }
   if (req.op) return runOp(req.op, settings, chat, root, push, status)
   if (req.mode === 'pro') return runPro(req, settings, project, chat, push, status)
+  if (req.mode === 'video' && isVsr(req.model)) return runVsr(req, project, chat, push, status)
   // картинка или видео
   const params: Record<string, any> = { model: req.model.id, ...(req.params || {}) }
   if (req.text) params.prompt = req.text
@@ -515,6 +518,32 @@ async function runPro(req: SendRequest, settings: Settings, project: Project, ch
   }
 }
 
+/** «Убрать текст с видео»: VSR на своём RunPod. */
+async function runVsr(req: SendRequest, project: Project, chat: Chat, push: (m: Message) => void, status: (s: string) => void) {
+  let stopped = false
+  active.set(chat.id, { projectId: project.id, stop: () => (stopped = true) })
+  try {
+    const key = secrets.get('app:runpod')
+    if (!key) throw new Error('RunPod не настроен: добавьте ключ в Настройки → RunPod / WaveSpeed')
+    const vid = req.attachments.find((a) => a.kind === 'video')
+    if (!vid) throw new Error('Прикрепите видео, с которого нужно убрать текст')
+    const s3raw = secrets.get('app:runpod-s3')
+    const root = store.expand(project.folder)
+    const p = req.vsr || { mode: 'sttn-auto' as const, areas: [] }
+    const r = await vsr.run({ key, s3: s3raw ? JSON.parse(s3raw) : null }, p, vid.path, join(root, 'generated'), status, () => stopped)
+    const mode = vsrMode(r.mode)
+    gallery.add({ path: r.path, source: 'video', prompt: req.text || 'Убрать текст с видео', model: `VSR · ${mode.name} (RunPod)`,
+      params: { ...p }, parent: gallery.ensure(vid.path, project.id).id, projectId: project.id, chatId: chat.id })
+    push({ role: 'assistant', _media: [r.path],
+      content: `Готово на RunPod (VSR, ${mode.name}${p.areas.length ? `, рамок: ${p.areas.length}` : ', текст найден автоматически'}) за ${r.seconds} с обработки${r.cold ? ' плюс запуск видеокарты' : ''} — сохранено в ${relative(root, r.path)}` })
+  } catch (e) {
+    push({ role: 'assistant', content: (e as Error).message, _error: true })
+  } finally {
+    active.delete(chat.id)
+    emit({ type: 'done', chatId: chat.id })
+  }
+}
+
 const proModels = (): Model[] => PRO_MODELS.map((m) => ({
   id: m.id, type: 'pro', name: m.name, description: m.note, uncensored: true, tools: false, vision: false, reasoning: false, web_search: false,
   context: null, constraints: { family: m.family, kind: m.kind, maxRefs: m.maxRefs, fast: !!m.fast, lora: m.lora }, pricing: {},
@@ -569,11 +598,12 @@ function handlers() {
         errors.push(`${t}: ${(e as Error).message}`)
       }
     }))
+    out.video = [vsrModel(), ...out.video]
     out.errors = errors.join('; ')
     return out
   })
   h('balance', () => (loadSettings().api_key ? venice().balance().catch(() => null) : null))
-  h('video:quote', (_e, params) => venice().videoQuote(params).catch(() => null))
+  h('video:quote', (_e, params) => (params?.model === VSR_MODEL_ID ? null : venice().videoQuote(params).catch(() => null)))
 
   h('projects:list', () => store.userProjects())
   h('projects:default', () => store.defaultProject())
@@ -872,6 +902,20 @@ function handlers() {
     secrets.set('app:runpod', key.trim())
   })
   h('runpod:removeKey', () => secrets.remove('app:runpod'))
+  h('runpod:s3', () => {
+    const v = secrets.get('app:runpod-s3')
+    return v ? { access: JSON.parse(v).access as string } : null
+  })
+  h('runpod:setS3', async (_e, access: string, secret: string) => {
+    const key = secrets.get('app:runpod')
+    if (!key) throw new Error('Сначала сохраните основной ключ RunPod')
+    access = access.trim()
+    secret = secret.trim()
+    if (!access || !secret) throw new Error('Нужны оба поля: Access key и Secret')
+    await vsr.checkS3(key, access, secret)
+    secrets.set('app:runpod-s3', JSON.stringify({ access, secret }))
+  })
+  h('runpod:removeS3', () => secrets.remove('app:runpod-s3'))
   h('firefox:status', () => firefox.status())
   h('firefox:pair', () => firefox.pair())
   h('firefox:unpair', () => firefox.unpairAll())

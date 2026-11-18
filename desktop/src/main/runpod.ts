@@ -13,7 +13,7 @@ export interface RunpodCfg { key: string; endpoint: string }
 
 const API = 'https://api.runpod.ai/v2'
 
-async function call(cfg: RunpodCfg, path: string, body?: unknown) {
+export async function call(cfg: RunpodCfg, path: string, body?: unknown) {
   const r = await fetch(`${API}/${cfg.endpoint}${path}`, {
     method: body ? 'POST' : 'GET',
     headers: { Authorization: `Bearer ${cfg.key}`, 'Content-Type': 'application/json' },

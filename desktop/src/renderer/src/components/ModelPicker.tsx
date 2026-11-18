@@ -4,7 +4,7 @@ import { imageFrom, money, textPrice } from '@shared/pricing'
 import type { Mode, Model } from '@shared/types'
 import { Popover } from './Popover'
 
-const VIDEO_TYPES: Record<string, string> = { 'text-to-video': 'текст → видео', 'image-to-video': 'картинка → видео', video: 'видео → видео' }
+const VIDEO_TYPES: Record<string, string> = { 'text-to-video': 'текст → видео', 'image-to-video': 'картинка → видео', video: 'видео → видео', vsr: 'убрать текст · ваш RunPod' }
 
 function features(m: Model, mode: Mode): string[] {
   const out: string[] = []
@@ -37,7 +37,7 @@ const FILTERS: Record<Mode, [string, string, (m: Model) => boolean][]> = {
     ['vision', 'Зрение', (m) => m.vision], ['reason', 'Рассуждение', (m) => m.reasoning]],
   image: [['all', 'Все', () => true], ['unc', 'Без цензуры', (m) => m.uncensored]],
   video: [['all', 'Все', () => true], ['t2v', 'Из текста', (m) => m.constraints?.model_type === 'text-to-video'],
-    ['i2v', 'Из картинки', (m) => m.constraints?.model_type === 'image-to-video'], ['v2v', 'Из видео', (m) => m.constraints?.model_type === 'video']],
+    ['i2v', 'Из картинки', (m) => m.constraints?.model_type === 'image-to-video'], ['v2v', 'Из видео', (m) => m.constraints?.model_type === 'video' || m.constraints?.model_type === 'vsr']],
   pro: [['all', 'Все', () => true], ['edit', 'Правка по фото', (m) => m.constraints?.kind === 'edit'], ['gen', 'Генерация и img2img', (m) => m.constraints?.kind === 'gen']],
 }
 

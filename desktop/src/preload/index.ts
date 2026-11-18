@@ -58,7 +58,8 @@ const api: Api = {
       return () => ipcRenderer.removeListener('firefox:changed', fn)
     },
   } as Api['firefox'],
-  runpod: { status: call('runpod:status'), spend: call('runpod:spend'), setKey: call('runpod:setKey'), removeKey: call('runpod:removeKey') } as Api['runpod'],
+  runpod: { status: call('runpod:status'), spend: call('runpod:spend'), setKey: call('runpod:setKey'), removeKey: call('runpod:removeKey'),
+    s3: call('runpod:s3'), setS3: call('runpod:setS3'), removeS3: call('runpod:removeS3') } as Api['runpod'],
   wavespeed: { status: call('wavespeed:status'), setKey: call('wavespeed:setKey'), removeKey: call('wavespeed:removeKey') } as Api['wavespeed'],
   telegram: { status: call('telegram:status'), setToken: call('telegram:setToken'), unlink: call('telegram:unlink') } as Api['telegram'],
   schedules: { run: call('schedules:run') } as Api['schedules'],

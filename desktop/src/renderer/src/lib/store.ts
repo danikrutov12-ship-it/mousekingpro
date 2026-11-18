@@ -37,6 +37,8 @@ export interface State {
   keepRest: boolean     // при правке по фото: не менять остальное
   avoid: string         // при правке по фото: чего не должно быть (аналог негативного промпта)
   proNegative: string   // «Картинка Pro»: негативный промпт
+  vsrFor: string        // «Убрать текст с видео»: видео, к которому нарисованы рамки
+  vsrAreas: import('@shared/vsr').VsrArea[]
   approvals: ApprovalReq[]
   mode: Mode
   draft: string
@@ -74,6 +76,8 @@ let state: State = {
   keepRest: true,
   avoid: '',
   proNegative: '',
+  vsrFor: '',
+  vsrAreas: [],
   approvals: [],
   mode: 'text',
   draft: '',

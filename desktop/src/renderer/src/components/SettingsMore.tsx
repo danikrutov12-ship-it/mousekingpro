@@ -421,6 +421,58 @@ function WavespeedBlock() {
   )
 }
 
+/** S3-ключ RunPod: видео для «Убрать текст» идёт прямо на сетевой диск (через запрос — только до 10 МБ). */
+function S3Block() {
+  const [st, setSt] = useState<{ access: string } | null | undefined>(undefined)
+  const [access, setAccess] = useState('')
+  const [secret, setSecret] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = () => api.runpod.s3().then(setSt).catch(() => setSt(null))
+  useEffect(() => {
+    load()
+  }, [])
+  if (st === undefined) return null
+  return (
+    <>
+      <h3 style={{ marginTop: 26 }}>S3-ключ RunPod — для видео</h3>
+      <div className="hint" style={{ marginBottom: 14, fontSize: 13, color: 'var(--text-2)' }}>
+        Нужен для «Убрать текст с видео»: видео загружается прямо на ваш сетевой диск, а не в запросе (там лимит 10 МБ). Без ключа — только ролики до 7 МБ.
+      </div>
+      {!st ? (
+        <div className="field">
+          <label>Access key и Secret</label>
+          <div className="row-end">
+            <input className="input mono" placeholder="Access key (user_…)" value={access} onChange={(e) => setAccess(e.target.value)} />
+            <input className="input mono" type="password" placeholder="Secret (rps_…)" value={secret} onChange={(e) => setSecret(e.target.value)} />
+            <button className="btn primary" disabled={!access.trim() || !secret.trim() || busy} onClick={async () => {
+              setBusy(true)
+              try {
+                await api.runpod.setS3(access, secret)
+                setAccess('')
+                setSecret('')
+                toast('S3-ключ проверен и сохранён', 'ok')
+                load()
+              } catch (e) {
+                toast(errText(e), 'error')
+              }
+              setBusy(false)
+            }}>{busy ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}{busy ? 'Проверяю…' : 'Сохранить'}</button>
+          </div>
+          <div className="hint">runpod.io → Settings → S3 API Keys → Create. Оба значения показываются один раз при создании. Хранятся только на этом компьютере, зашифрованными.</div>
+        </div>
+      ) : (
+        <div className="toggle-row">
+          <div className="t"><b>S3-ключ сохранён</b><span className="mono">{st.access}</span></div>
+          <button className="btn ghost danger" onClick={async () => {
+            await api.runpod.removeS3()
+            load()
+          }}><Trash2 size={14} />Удалить ключ</button>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function RunpodTab({ settings }: { settings: Settings }) {
   const [st, setSt] = useState<Awaited<ReturnType<typeof api.runpod.status>> | null>(null)
   const [key, setKey] = useState('')
@@ -498,6 +550,7 @@ export function RunpodTab({ settings }: { settings: Settings }) {
         {checking ? <Loader2 size={14} className="spin" /> : <Play size={14} />}{checking ? 'Проверяю…' : 'Проверить подключение'}
       </button>
       {st?.key && <RunpodSpendBlock refresh={st} />}
+      {st?.key && <S3Block />}
       <WavespeedBlock />
     </>
   )

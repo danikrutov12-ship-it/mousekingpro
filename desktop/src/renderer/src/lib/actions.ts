@@ -2,9 +2,10 @@
 import type { Attachment, Chat, EditModel, MediaOp, Message, Mode, Model, RunEvent, SendRequest, Settings } from '@shared/types'
 import { api } from './api'
 import { get, set, type Artifact, type PanelTab } from './store'
-import { baseName, fileUrl } from './format'
+import { baseName, fileUrl, videoDuration } from './format'
 import { aspectForPhoto, isReferenceModel, photoProblem, photoSibling } from '@shared/video'
 import { isWavespeed, proModel } from '@shared/runpod'
+import { isVsr, VSR_MAX_SECONDS, vsrAreasFor, vsrMode } from '@shared/vsr'
 
 let toastId = 0
 export function toast(text: string, kind?: 'error' | 'ok') {
@@ -191,7 +192,26 @@ export async function send(text: string, attachments: Attachment[], params?: Rec
     toast('Опишите изображение', 'error')
     return false
   }
-  if (mode === 'video') {
+  if (mode === 'video' && isVsr(model)) {
+    const vid = attachments.find((a) => a.kind === 'video')
+    if (!vid) {
+      toast('Прикрепите видео, с которого нужно убрать текст', 'error')
+      return false
+    }
+    if (!get().settings?.runpod_endpoint && !(await api.runpod.status().then((s) => s.key).catch(() => false))) {
+      toast('Подключите RunPod: Настройки → RunPod / WaveSpeed', 'error')
+      set({ settingsOpen: true })
+      return false
+    }
+    const dur = await videoDuration(vid.path)
+    if (dur > VSR_MAX_SECONDS) {
+      toast(`Видео ${Math.floor(dur / 60)} мин ${Math.round(dur % 60)} с — больше 10 минут. Обрежьте его или разбейте на части`, 'error')
+      return false
+    }
+    extra = { ...extra, vsr: { mode: vsrMode(get().settings?.vsr_mode).id, areas: vsrAreasFor(vid.path, get()) } }
+    params = undefined
+  }
+  if (mode === 'video' && !isVsr(model)) {
     const photos = attachments.filter((a) => a.kind === 'image')
     // фото к модели «только по тексту» — она его не увидит; берём её вариант для фото из той же серии
     if (photos.length && model.constraints?.model_type === 'text-to-video') {

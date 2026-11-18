@@ -67,3 +67,14 @@ export function colorFor(text: string): string {
   for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) >>> 0
   return PALETTE[h % PALETTE.length]
 }
+
+/** Длительность видео по метаданным, в секундах (0 — не удалось прочитать). */
+export function videoDuration(path: string): Promise<number> {
+  return new Promise((ok) => {
+    const v = document.createElement('video')
+    v.preload = 'metadata'
+    v.onloadedmetadata = () => ok(Number.isFinite(v.duration) ? v.duration : 0)
+    v.onerror = () => ok(0)
+    v.src = fileUrl(path)
+  })
+}

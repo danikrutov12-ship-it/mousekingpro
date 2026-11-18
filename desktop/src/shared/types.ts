@@ -11,6 +11,8 @@ export interface Settings {
   video_model: string
   pro_model: string
   runpod_endpoint: string
+  /** «Убрать текст с видео»: выбранный алгоритм VSR */
+  vsr_mode?: string
   /** последние настройки «Картинки Pro» */
   pro_opts?: { keep?: boolean; hires?: boolean; detail?: boolean; maxq?: boolean; fast?: boolean; strength?: number; upscale?: boolean; aspect?: string; loras?: { name: string; weight: number }[] }
   temperature: number
@@ -248,6 +250,7 @@ export interface SendRequest {
   memory?: boolean // использовать память в этом чате (для нового чата)
   refPaths?: string[] // фото набора референсов для reference-to-video
   pro?: import('./runpod').ProParams // «Картинка Pro» на RunPod
+  vsr?: import('./vsr').VsrParams // «Убрать текст с видео» (VSR на RunPod)
 }
 
 // События запуска агента/генерации, которые основной процесс шлёт в интерфейс
@@ -369,6 +372,10 @@ export interface Api {
     spend(): Promise<RunpodSpendInfo | null>
     setKey(key: string): Promise<void>
     removeKey(): Promise<void>
+    /** S3-ключ RunPod (для видео в «Убрать текст»): null — не сохранён */
+    s3(): Promise<{ access: string } | null>
+    setS3(access: string, secret: string): Promise<void>
+    removeS3(): Promise<void>
   }
   wavespeed: {
     status(): Promise<{ key: boolean; balance: number | null }>

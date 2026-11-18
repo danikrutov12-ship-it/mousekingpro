@@ -9,6 +9,8 @@ import { fileUrl, humanSize } from '../lib/format'
 import { get, set, useApp } from '../lib/store'
 import { defaults, MediaOptions } from './MediaOptions'
 import { ProOptions } from './ProOptions'
+import { VsrOptions } from './VsrOptions'
+import { isVsr } from '@shared/vsr'
 import { ContextRing } from './Jobs'
 import { ModelPicker } from './ModelPicker'
 import { Popover } from './Popover'
@@ -283,7 +285,8 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
         {mode !== 'text' && mode !== 'pro' && (
           <motion.div key={mode} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
-            {!(mode === 'image' && (attachments.some((a) => a.kind === 'image') || refSetOn)) && (
+            {mode === 'video' && isVsr(model) ? <VsrOptions video={attachments.find((a) => a.kind === 'video')} />
+              : !(mode === 'image' && (attachments.some((a) => a.kind === 'image') || refSetOn)) && (
               <>
                 <button className="opts-summary" onClick={() => setOptsOpen(!optsOpen)}>
                   <SlidersHorizontal size={13} /><span>{summary(mode, params)}</span><ChevronDown size={13} style={{ transform: optsOpen ? 'rotate(180deg)' : undefined }} />
@@ -295,7 +298,7 @@ export function Composer({ placement }: { placement: 'center' | 'bottom' }) {
           </motion.div>
         )}
       </AnimatePresence>
-      <textarea ref={ta} rows={1} value={draft} placeholder={PLACEHOLDER[mode]}
+      <textarea ref={ta} rows={1} value={draft} placeholder={mode === 'video' && isVsr(model) ? 'Прикрепите видео и выделите текст — писать ничего не нужно' : PLACEHOLDER[mode]}
         onChange={(e) => set({ draft: e.target.value })}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onPaste={onPaste}
         onKeyDown={(e) => {

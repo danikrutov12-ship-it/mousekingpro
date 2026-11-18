@@ -20,7 +20,10 @@ git -C "$N/node" log -1 --format='узел: %h %cs'
 # --- пакеты: ставим только то, чего нет в окружении воркера, и без зависимостей (torch, numpy и т. п. — из образа)
 grep -viE '^(torch|torchvision|numpy|opencv-python)\b' "$N/node/requirements.txt" > /tmp/req.txt
 $PY -c "import cv2" 2>/dev/null || echo opencv-python-headless >> /tmp/req.txt
-$PY -m pip install --dry-run --quiet --report /tmp/r.json -r /tmp/req.txt
+# версии из образа не меняем (-c): иначе pip берёт самую новую diffusers, которой нужна более свежая
+# huggingface_hub, чем в образе, — а пакеты образа главнее, и узел не импортируется
+$PY -m pip freeze | grep -vE '^(-e |.* @ )' > /tmp/cons.txt
+$PY -m pip install --dry-run --quiet --report /tmp/r.json -r /tmp/req.txt -c /tmp/cons.txt || exit 1
 $PY - <<'EOF' > /tmp/missing.txt
 import json
 for i in json.load(open('/tmp/r.json'))['install']:
@@ -36,6 +39,9 @@ else
   mkdir -p "$N/pylib.tmp"
 fi
 rm -rf "$N/pylib" && mv "$N/pylib.tmp" "$N/pylib"
+# проверка: всё импортируется вместе с библиотеками образа
+echo "$N/pylib" > "$($PY -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')/zz-seedvr2.pth"
+$PY -c "import diffusers, peft, rotary_embedding_torch, omegaconf, gguf; print('импорт ок: diffusers', diffusers.__version__, 'peft', peft.__version__)" || exit 1
 
 # --- модели (7B fp16 — максимум качества, и VAE)
 cd "$V/models/SEEDVR2"

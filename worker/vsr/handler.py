@@ -59,9 +59,24 @@ def set_config(mode, w, h):
         cfg = {}
     if mode == 'propainter':
         mp = w * h / 1e6
-        n = int((gpu_gb() * 0.85 - 9) / (0.22 * max(mp, 0.3)))
+        # 0.44 ГБ на кадр-мегапиксель в fp32 (в fp16 было 0.22 — см. propainter_fp32)
+        n = int((gpu_gb() * 0.85 - 9) / (0.44 * max(mp, 0.3)))
         cfg.setdefault('ProPainter', {})['MaxLoadNum'] = max(8, min(70, n))
     json.dump(cfg, open(path, 'w'))
+
+
+def propainter_fp32():
+    """ProPainter в VSR считает в fp16; на части видео значения переполняются, и вместо текста получается
+    чёрный прямоугольник (NaN → 0). Переключаем на fp32 правкой файла в контейнере (в образе он свой у каждого воркера)."""
+    p = os.path.join(VSR, 'backend', 'inpaint', 'propainter_inpaint.py')
+    try:
+        s = open(p, encoding='utf-8').read()
+    except OSError:
+        return 'файл ProPainter не найден'
+    if 'use_fp16=True' not in s:
+        return 'fp16 уже выключен' if 'use_fp16=False' in s else 'use_fp16 не найден — правка не применена'
+    open(p, 'w', encoding='utf-8').write(s.replace('use_fp16=True', 'use_fp16=False'))
+    return 'ProPainter переключён на fp32'
 
 
 def to_h264(src, dst):
@@ -130,6 +145,9 @@ def handler(job):
     if not areas and mode == 'sttn-auto':
         mode = 'sttn-det'  # без рамки STTN стёр бы весь кадр — ищем текст детектором
     set_config(mode, w, h)
+    patch = propainter_fp32() if mode == 'propainter' else ''
+    if patch:
+        print(patch)
     cmd = [sys.executable, '-u', 'backend/main.py', '-i', src, '-o', raw, '--inpaint-mode', mode]
     for a in areas:
         cmd += ['-c', *map(str, a)]
@@ -158,7 +176,8 @@ def handler(job):
         os.remove(raw)
     else:
         os.replace(raw, out)
-    res = {'seconds': round(time.time() - started), 'width': w, 'height': h, 'mode': mode, 'h264': h264}
+    res = {'seconds': round(time.time() - started), 'width': w, 'height': h, 'mode': mode, 'h264': h264,
+           'log': ([patch] if patch else []) + [l for l in tail.split('\n') if l.strip() and '%|' not in l][-15:]}
     if small:
         res['video_b64'] = base64.b64encode(open(out, 'rb').read()).decode()
         shutil.rmtree(d, ignore_errors=True)

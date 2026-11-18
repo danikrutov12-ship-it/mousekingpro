@@ -64,6 +64,19 @@ def set_config(mode, w, h):
     json.dump(cfg, open(path, 'w'))
 
 
+def to_h264(src, dst):
+    """VSR 1.4.0 пишет MPEG-4 Part 2 — встроенный плеер (Chromium) его не играет. Перекодируем в H.264, звук как есть."""
+    ff = next((p for p in (os.path.join(VSR, 'backend', 'ffmpeg', 'linux_x64', 'ffmpeg'), shutil.which('ffmpeg')) if p and os.path.exists(p)), None)
+    if not ff:
+        return False
+    r = subprocess.run([ff, '-y', '-v', 'error', '-i', src, '-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast',
+                        '-crf', '17', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', dst],
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if r.returncode != 0:
+        print('to_h264:', r.stdout[-800:])
+    return r.returncode == 0 and os.path.exists(dst) and os.path.getsize(dst) > 0
+
+
 def cleanup_old():
     """Задачи старше суток (программа не успела забрать) — удаляем, чтобы не занимать диск."""
     if not os.path.isdir(JOBS):
@@ -100,7 +113,7 @@ def handler(job):
         name = inp.get('file', '')
         if not FILE.match(name):
             return {'error': 'неверное имя файла'}
-    src, out = os.path.join(d, name), os.path.join(d, 'out.mp4')
+    src, out, raw = os.path.join(d, name), os.path.join(d, 'out.mp4'), os.path.join(d, 'raw.mp4')
     if not os.path.exists(src):
         return {'error': 'видео не найдено на диске RunPod — загрузка не дошла'}
     w, h, dur = video_size(src)
@@ -117,7 +130,7 @@ def handler(job):
     if not areas and mode == 'sttn-auto':
         mode = 'sttn-det'  # без рамки STTN стёр бы весь кадр — ищем текст детектором
     set_config(mode, w, h)
-    cmd = [sys.executable, '-u', 'backend/main.py', '-i', src, '-o', out, '--inpaint-mode', mode]
+    cmd = [sys.executable, '-u', 'backend/main.py', '-i', src, '-o', raw, '--inpaint-mode', mode]
     for a in areas:
         cmd += ['-c', *map(str, a)]
     started = time.time()
@@ -137,10 +150,15 @@ def handler(job):
                 last, sent = pct, time.time()
     rc = proc.wait()
     tail = log.decode('utf-8', 'replace').replace('\r', '\n')
-    if rc != 0 or not os.path.exists(out):
+    if rc != 0 or not os.path.exists(raw):
         lines = [l for l in tail.split('\n') if l.strip() and '%|' not in l]
         return {'error': 'VSR завершился с ошибкой: ' + '\n'.join(lines[-12:])[-1500:]}
-    res = {'seconds': round(time.time() - started), 'width': w, 'height': h, 'mode': mode}
+    h264 = to_h264(raw, out)
+    if h264:
+        os.remove(raw)
+    else:
+        os.replace(raw, out)
+    res = {'seconds': round(time.time() - started), 'width': w, 'height': h, 'mode': mode, 'h264': h264}
     if small:
         res['video_b64'] = base64.b64encode(open(out, 'rb').read()).decode()
         shutil.rmtree(d, ignore_errors=True)

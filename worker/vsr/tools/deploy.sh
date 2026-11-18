@@ -7,8 +7,12 @@ K=$(cat ~/.runpod-key)
 BRANCH=${1:-vsr}
 gql() { curl -s https://api.runpod.io/graphql -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d "$1"; }
 read -r VOL_ID DC < <(gql '{"query":"query { myself { networkVolumes { id name dataCenterId } } }"}' | python3 -c "import json,sys;v=[x for x in json.load(sys.stdin)['data']['myself']['networkVolumes'] if x['name']=='mouse-king-pro-models'][0];print(v['id'],v['dataCenterId'])")
-RAW="https://raw.githubusercontent.com/danikrutov12-ship-it/mousekingpro/$BRANCH/worker/vsr"
-SCRIPT="mkdir -p /runpod-volume/vsr/jobs && for f in handler.py start.sh diag.py; do curl -sfL -o /runpod-volume/vsr/\$f $RAW/\$f; done; sleep 3600"
+# по точному коммиту, а не по имени ветки: raw.githubusercontent.com кэширует ветки на несколько минут
+SHA=$(git ls-remote https://github.com/danikrutov12-ship-it/mousekingpro.git "refs/heads/$BRANCH" | cut -f1)
+[ -n "$SHA" ] || { echo "ветка $BRANCH не найдена на GitHub" >&2; exit 1; }
+echo "выкладываю $BRANCH @ ${SHA:0:7}"
+RAW="https://raw.githubusercontent.com/danikrutov12-ship-it/mousekingpro/$SHA/worker/vsr"
+SCRIPT="mkdir -p /runpod-volume/vsr/jobs && for f in handler.py job.py start.sh diag.py; do curl -sfL -o /runpod-volume/vsr/\$f $RAW/\$f; done; sleep 3600"
 B=$(printf '%s' "$SCRIPT" | base64 -w0)
 BODY=$(python3 - "$B" "$VOL_ID" "$DC" <<'EOF'
 import json,sys

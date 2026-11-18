@@ -116,7 +116,7 @@ worker-comfyui 5.10.0 ищет модели в `/runpod-volume/models/{checkpoin
 
 - **Временный CPU-под** (около $0.06/ч) с этим диском, которому в `dockerStartCmd` передаётся команда
   (скачать, переложить, записать). Под удаляется сразу после работы. Готовый пример — `worker/vsr/tools/deploy.sh`
-  в ветке `vsr`.
+  в ветке `vsr` (берёт файлы с GitHub по номеру коммита — сначала push).
   - Создание пода: `POST https://rest.runpod.io/v1/pods` с `computeType: "CPU"`, `networkVolumeId`, `dataCenterIds: ["EU-RO-1"]`.
   - Время работы пода: GraphQL `pod { runtime { uptimeInSeconds } }`.
   - Логи пода через API недоступны, HTTP-прокси CPU-пода отвечал 403.
@@ -145,8 +145,10 @@ worker-comfyui 5.10.0 ищет модели в `/runpod-volume/models/{checkpoin
     программа скачивает по S3 и удаляет с диска;
   - без ключа видео до 7 МБ передаётся прямо в запросе как `video_b64`, и результат возвращается так же.
 - **Воркер** (`worker/vsr/`):
-  - `start.sh` один раз ставит пакет `runpod` в `/runpod-volume/vsr/pylib` и запускает `handler.py`;
-  - `handler.py` запускает CLI VSR отдельным процессом, по выводу tqdm шлёт прогресс через
+  - `start.sh` при необходимости ставит пакет `runpod` (в контейнер, копия — в `/runpod-volume/vsr/pylib`) и запускает `handler.py`;
+  - `handler.py` — тонкий запускатель: на каждую задачу заново загружает `job.py` с диска, поэтому
+    выложенные `deploy.sh` исправления действуют сразу, без перезапуска воркеров;
+  - `job.py` запускает CLI VSR отдельным процессом, по выводу tqdm шлёт прогресс через
     `runpod.serverless.progress_update`, а задачи старше суток удаляет;
   - если обработчик упал, `diag.py` на чистой стандартной библиотеке берёт задачу и возвращает лог запуска как ошибку.
 - **Тест без программы:** `worker/vsr/tools/test.sh видео.mp4 sttn-auto '[[x0,y0,x1,y1]]'`.

@@ -41,7 +41,21 @@ rm -rf "$N/pylib" && mv "$N/pylib.tmp" "$N/pylib"
 cd "$V/models/SEEDVR2"
 for f in seedvr2_ema_7b_fp16.safetensors ema_vae_fp16.safetensors; do
   if [ ! -s "$f" ]; then
-    curl -fL --retry 3 -o "$f.part" "https://huggingface.co/numz/SeedVR2_comfyUI/resolve/main/$f" && mv "$f.part" "$f"
+    # в образе worker-comfyui нет curl — качаем Python'ом (с повторами)
+    $PY - "$f" <<'PYEOF' && mv "$f.part" "$f"
+import sys, time, shutil, urllib.request
+f = sys.argv[1]
+for attempt in range(4):
+    try:
+        req = urllib.request.Request(f'https://huggingface.co/numz/SeedVR2_comfyUI/resolve/main/{f}', headers={'User-Agent': 'mkp-setup'})
+        with urllib.request.urlopen(req, timeout=120) as r, open(f + '.part', 'wb') as out:
+            shutil.copyfileobj(r, out, 16 * 1024 * 1024)
+        break
+    except Exception as e:
+        print('повтор', attempt + 1, e); time.sleep(10)
+else:
+    sys.exit(1)
+PYEOF
   fi
 done
 ls -la "$V/models/SEEDVR2"

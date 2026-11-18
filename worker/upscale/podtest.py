@@ -8,6 +8,8 @@ import time
 import urllib.request
 
 src, dst = sys.argv[1], sys.argv[2]
+blocks = int(sys.argv[3]) if len(sys.argv) > 3 else 0  # подкачка блоков DiT в память (для карт 24–32 ГБ)
+print('blocks_to_swap =', blocks)
 shutil.copy(src, '/comfyui/input/test.jpg')
 proc = subprocess.Popen(['/opt/venv/bin/python', 'main.py', '--listen', '127.0.0.1', '--port', '8188'], cwd='/comfyui')
 API = 'http://127.0.0.1:8188'
@@ -30,8 +32,8 @@ dev = get('/object_info/SeedVR2LoadDiTModel')['SeedVR2LoadDiTModel']['input']['r
 print('устройства:', dev)
 wf = {
     '1': {'class_type': 'LoadImage', 'inputs': {'image': 'test.jpg'}},
-    '2': {'class_type': 'SeedVR2LoadDiTModel', 'inputs': {'model': 'seedvr2_ema_7b_fp16.safetensors', 'device': dev[0], 'blocks_to_swap': 0,
-          'swap_io_components': False, 'offload_device': 'none', 'cache_model': False, 'attention_mode': 'sdpa'}},
+    '2': {'class_type': 'SeedVR2LoadDiTModel', 'inputs': {'model': 'seedvr2_ema_7b_fp16.safetensors', 'device': dev[0], 'blocks_to_swap': blocks,
+          'swap_io_components': blocks > 0, 'offload_device': 'cpu' if blocks else 'none', 'cache_model': False, 'attention_mode': 'sdpa'}},
     '3': {'class_type': 'SeedVR2LoadVAEModel', 'inputs': {'model': 'ema_vae_fp16.safetensors', 'device': dev[0], 'encode_tiled': True,
           'encode_tile_size': 1024, 'encode_tile_overlap': 128, 'decode_tiled': True, 'decode_tile_size': 1024, 'decode_tile_overlap': 128,
           'tile_debug': 'false', 'offload_device': 'none', 'cache_model': False}},
